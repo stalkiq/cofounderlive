@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.p8
+*.pem
+*.key
+.DS_Store
+npm-debug.log*
+fair-skin-woman-face.md
+lib/appstore-connect.mjs

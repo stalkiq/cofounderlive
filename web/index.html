@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cofounder Live · GOOGLEBUDY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css?v=20260826-human" />
+</head>
+<body>
+  <div class="frame">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">GB</span>
+        <div>
+          <p class="eyebrow">GOOGLEBUDY · Gemini 3.5</p>
+          <h1>Cofounder Live</h1>
+        </div>
+      </div>
+      <p class="lede">One idea. Two AI cofounders. From investor page to working MVP.</p>
+      <div class="status">
+        <span class="onair standby" id="onAir">Standby</span>
+        <time class="clock" id="clock"></time>
+      </div>
+    </header>
+
+    <section class="desk" id="crew">
+      <article class="talent" data-agent="creative">
+        <div class="portrait">
+          <img src="./assets/maya-creative-cofounder.jpg" alt="Maya, the AI Creative Cofounder" />
+          <span class="portrait-status">AI</span>
+        </div>
+        <div class="third">
+          <span class="role">Maya · Creative Cofounder</span>
+          <strong>Shapes the story, brand, and visual direction</strong>
+        </div>
+      </article>
+      <article class="talent" data-agent="technical">
+        <div class="portrait">
+          <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo, the AI Technical Cofounder" />
+          <span class="portrait-status">AI</span>
+        </div>
+        <div class="third">
+          <span class="role">Theo · Technical Cofounder</span>
+          <strong>Builds the investor page, then launches the working MVP</strong>
+        </div>
+      </article>
+    </section>
+
+    <section class="floor">
+      <div class="guest">
+        <div class="guest-head">
+          <span class="dot"></span>
+          <p>Founder · You</p>
+        </div>
+        <p class="hint">Describe the company you wish existed. Your cofounders will design it, build it, and put it live.</p>
+        <form id="missionForm">
+          <textarea id="goal" rows="5" placeholder="Example: An app for adult children coordinating care for aging parents. It should reduce missed appointments, medication confusion, and family stress."></textarea>
+          <button type="submit" id="runBtn">Build it live</button>
+        </form>
+        <section class="studio" id="studio" hidden>
+          <header class="studio-bar">
+            <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <strong>AI Build Studio</strong>
+            <span id="studioRevision">Revision 2</span>
+          </header>
+          <div class="studio-tabs">
+            <button type="button" class="studio-tab active">Preview</button>
+            <span id="studioState">Ready</span>
+          </div>
+          <iframe id="studioPreview" class="studio-preview" title="Editable product concept preview"></iframe>
+          <div class="studio-log" id="studioLog" aria-live="polite">
+            <p><strong>Creative + Technical</strong><span>Ask us to change the product, workflow, copy, layout, or visual direction.</span></p>
+          </div>
+          <form class="studio-composer" id="studioForm">
+            <textarea id="studioPrompt" rows="3" placeholder="Ask your AI cofounders to improve the product concept…"></textarea>
+            <div>
+              <span>Gemini · Vertex AI</span>
+              <div class="studio-actions">
+                <button type="button" id="studioCode">Code ↓</button>
+                <button type="button" id="studioGithub">Create PR ↗</button>
+                <button type="submit" id="studioSend">Build change ↑</button>
+              </div>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <aside class="program">
+        <div class="program-head">
+          <h2>Build board</h2>
+          <span id="packStatus">Waiting for an idea</span>
+        </div>
+        <div id="pack" class="pack">
+          <p class="empty">Creative’s visual direction and Technical’s published URL will appear here.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="transcript">
+      <div class="transcript-head">
+        <h2>Cofounder room</h2>
+        <span>Live build log</span>
+      </div>
+      <div id="log" class="log"></div>
+    </section>
+  </div>
+  <script src="./app.js?v=20260826-google-delivery"></script>
+</body>
+</html>

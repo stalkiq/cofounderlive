@@ -8,7 +8,14 @@ import { runMvpSprint, runNightShift, runWatcherTick } from "./lib/agent.mjs";
 import * as memory from "./lib/memory.mjs";
 import { geminiStatus } from "./lib/gemini.mjs";
 import { getWorkspaceState, runWorkspaceTurn } from "./lib/workspace.mjs";
-import { getBigQueryCapabilityData, runGeminiCapability } from "./lib/google-capabilities.mjs";
+import {
+  analyzeVisionCapability,
+  getBigQueryCapabilityData,
+  getGeospatialCapabilityData,
+  googleCapabilitiesStatus,
+  runGeminiCapability,
+  translateCapabilityText,
+} from "./lib/google-capabilities.mjs";
 import { buildProductFiles } from "./lib/product-export.mjs";
 import { deliverProductToGitHub, githubDeliveryStatus } from "./lib/github-delivery.mjs";
 import {
@@ -60,6 +67,7 @@ app.get("/health", (_req, res) => {
     service: "cofounder-live",
     ttsEnabled: Boolean(ttsClient),
     gemini: geminiStatus(),
+    googleCapabilities: googleCapabilitiesStatus(),
     githubDelivery: githubDeliveryStatus(),
     publishing: "firestore",
     missions: memory.listMissions().length,
@@ -94,6 +102,7 @@ app.post("/api/project/restore", async (req, res) => {
         headline: mvp.mvp?.headline || "",
         workflow: mvp.mvp?.workflow?.title || "",
         googleCapability: mvp.mvp?.googleCapability || null,
+        googleCapabilities: mvp.mvp?.googleCapabilities || (mvp.mvp?.googleCapability ? [mvp.mvp.googleCapability] : []),
         revision: mvp.revision || 1,
       } : null,
     });
@@ -157,6 +166,54 @@ app.get("/api/mvp/:missionId/analytics", async (req, res) => {
     const data = await getBigQueryCapabilityData(missionId, record.mvp);
     res.setHeader("Cache-Control", "no-store");
     return res.json(data);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/mvp/:missionId/capabilities/geo", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const record = await getMvpPage(missionId);
+    if (!record?.mvp) return res.status(404).json({ error: "Product concept not found" });
+    const data = await getGeospatialCapabilityData(record);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(data);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/mvp/:missionId/capabilities/translate", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const record = await getMvpPage(missionId);
+    if (!record?.mvp) return res.status(404).json({ error: "Product concept not found" });
+    const result = await translateCapabilityText(req.body?.text, record, req.body?.targetLanguage);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/mvp/:missionId/capabilities/vision", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const record = await getMvpPage(missionId);
+    if (!record?.mvp) return res.status(404).json({ error: "Product concept not found" });
+    const result = await analyzeVisionCapability(req.body?.image, record);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(result);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

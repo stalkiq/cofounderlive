@@ -35,6 +35,24 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 - Portable ZIP exports with deployment files
 - Idempotent GitHub branches and pull requests for finished revisions
 
+## How to use Cofounder Live
+
+The experience is a sequence of agent workflows. Each step can take one or two minutes because Maya and Theo are generating, reviewing, revising, and publishing real artifacts. Keep the page open and wait until the active button changes before continuing.
+
+1. Open the [live application](https://nano-banana-guide-26967920041.us-central1.run.app).
+2. Enter a detailed product idea in the prompt box. Include the intended user, the problem, and the desired outcome.
+3. Click **Build it live** once.
+4. Wait while Maya creates the creative direction and Theo builds the investor landing page. The live activity feed shows their tool calls and progress. Do not click the button repeatedly while the agents are working.
+5. When the landing page is complete, review its preview and published link. The main button changes to **Launch MVP**.
+6. Click **Launch MVP** and wait again. Theo builds the interactive product concept, Maya reviews it, and Theo applies the review. Theo also selects one or two relevant Google capabilities for the product.
+7. When this workflow finishes, the button changes to **View Product Concept**. Click it to open the generated product in a separate tab.
+8. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
+9. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Click **Build change** once and wait for the new revision. Theo updates the product, Maya reviews the change, and the preview refreshes when the revision is ready.
+10. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision.
+11. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
+
+If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. Starting a different idea in the main prompt creates a separate project and revision history.
+
 ### Landing-page workflow
 
 1. Maya calls `create_visual_direction`.
@@ -47,19 +65,26 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 1. Theo calls `build_mvp`.
 2. Maya calls `review_mvp`.
 3. Theo calls `revise_mvp`.
-4. Theo includes one product-appropriate Google capability.
+4. Theo includes one or two complementary, product-appropriate Google capabilities.
 5. The founder can continue iterating in AI Build Studio, download the code, or create a reviewable GitHub delivery PR.
 
 ## Autonomous Google capabilities
 
-Theo selects exactly one capability based on the founder brief and aligns it with a compatible product screen:
+Theo selects up to two complementary capabilities based on the founder brief and aligns each with a compatible product screen:
 
-- **Google Maps** for place-based discovery, routes, logistics, and field work
-- **Google Calendar** for appointments, shifts, reservations, and time-based coordination
+- **Google Maps JavaScript API** for real interactive world, regional, and local maps
+- **Places API** for real place searches, ratings, addresses, and map markers
+- **Routes API** for real routes, polylines, distance, and duration
+- **Weather API** for live location-specific conditions
+- **Air Quality API** for live AQI, pollutants, and health recommendations
+- **Geocoding API** for resolving generated product locations into coordinates
+- **Cloud Translation** for multilingual product workflows
+- **Cloud Vision** for image labels and text extraction
 - **BigQuery** for product-specific sample operations data and live analytics
 - **Gemini** for recommendations, planning, summarization, and product copilots
+- **Cloud Text-to-Speech** for spoken product results
 
-Maps and Calendar use official Google destinations without requesting account access. BigQuery uses mission-specific tables through the Cloud Run service account. Gemini uses the existing Vertex AI runtime.
+Examples include Maps + Weather, Places + Maps, Routes + Air Quality, Vision + Translation, Gemini + Text-to-Speech, and BigQuery + Gemini. OAuth-based access to a judge's Gmail, Drive, Calendar, or Sheets account is intentionally excluded to keep the judging flow fast and consent-free.
 
 ## GitHub delivery
 
@@ -79,6 +104,8 @@ There are no custom REST calls to Vertex AI and no Gemini API key. Cloud Run use
 - Cloud Run for the web app and agent runtime
 - Firestore for published pages, product concepts, and revision history
 - BigQuery for mission-specific sample analytics selected by Theo
+- Google Maps Platform APIs for Maps, Places, Routes, Weather, Air Quality, and Geocoding
+- Cloud Translation and Cloud Vision for language and image workflows
 - Cloud Text-to-Speech for distinct cofounder voices
 - Secret Manager for the optional repository-scoped GitHub credential
 - Server-Sent Events for live tool and agent progress
@@ -97,7 +124,7 @@ flowchart LR
     Maya --> Firestore[(Firestore)]
     Theo --> Firestore
     Theo --> BigQuery[(BigQuery)]
-    Theo --> GoogleActions[Maps and Calendar actions]
+    Theo --> GoogleActions[Maps Platform, Translation, Vision and TTS]
     Theo --> GitHub[GitHub delivery PR]
     Run --> TTS[Cloud Text-to-Speech]
     Run -->|SSE progress and artifact URLs| UI
@@ -122,14 +149,169 @@ gcloud auth application-default login
 gcloud config set project YOUR_PROJECT_ID
 gcloud services enable \
   aiplatform.googleapis.com \
+  airquality.googleapis.com \
   bigquery.googleapis.com \
   firestore.googleapis.com \
-  texttospeech.googleapis.com
+  geocoding-backend.googleapis.com \
+  maps-backend.googleapis.com \
+  places.googleapis.com \
+  routes.googleapis.com \
+  texttospeech.googleapis.com \
+  translate.googleapis.com \
+  vision.googleapis.com \
+  weather.googleapis.com
 export GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID
 npm start
 ```
 
 Open `http://localhost:8080`. The health endpoint reports the active provider, SDK, project, location, and model at `http://localhost:8080/health`.
+
+## Reproducible testing
+
+These checks use Node.js 20+, Python 3, `curl`, and the authenticated Google Cloud setup described above. Run them from the repository root.
+
+### 1. Verify the source and installed dependencies
+
+```bash
+npm ci
+npm ls --depth=0
+
+for file in server.mjs lib/*.mjs; do
+  node --check "$file"
+done
+node --check web/app.js
+git diff --check
+```
+
+Expected result: every command exits successfully with no syntax, dependency, or whitespace errors.
+
+### 2. Start the application and verify runtime health
+
+In one terminal:
+
+```bash
+export GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID
+npm start
+```
+
+In a second terminal:
+
+```bash
+curl --fail --silent http://127.0.0.1:8080/health | python3 -m json.tool
+```
+
+Expected result: the response contains `"ok": true`, `"sdk": "@google/genai"`, the configured Gemini model, and the available Google capabilities.
+
+### 3. Run the complete autonomous workflow
+
+Create a landing page:
+
+```bash
+curl --silent --show-error --no-buffer --max-time 240 \
+  --request POST http://127.0.0.1:8080/api/agent/run \
+  --header "Content-Type: application/json" \
+  --data '{"goal":"A wildfire operations map that uses route planning and live air quality to coordinate safer evacuations."}' \
+  > /tmp/cofounder-landing.sse
+```
+
+Extract the generated mission ID:
+
+```bash
+MISSION_ID=$(python3 - <<'PY'
+import json
+
+events = []
+for block in open("/tmp/cofounder-landing.sse").read().split("\n\n"):
+    if block.startswith("data: "):
+        events.append(json.loads(block[6:]))
+
+errors = [event for event in events if event.get("type") in {"error", "tool_error"}]
+done = next(event for event in reversed(events) if event.get("type") == "done")
+assert not errors, errors
+mission_id = done["proof"]["id"]
+assert mission_id.startswith("ep_")
+print(mission_id)
+PY
+)
+echo "$MISSION_ID"
+```
+
+Build, review, revise, and publish its product concept:
+
+```bash
+curl --silent --show-error --no-buffer --max-time 300 \
+  --request POST http://127.0.0.1:8080/api/agent/mvp \
+  --header "Content-Type: application/json" \
+  --data "{\"missionId\":\"$MISSION_ID\"}" \
+  > /tmp/cofounder-mvp.sse
+
+python3 - <<'PY'
+import json
+
+events = []
+for block in open("/tmp/cofounder-mvp.sse").read().split("\n\n"):
+    if block.startswith("data: "):
+        events.append(json.loads(block[6:]))
+
+errors = [event for event in events if event.get("type") in {"error", "tool_error"}]
+done = next(event for event in reversed(events) if event.get("type") == "done")
+proof = done["proof"]
+capabilities = proof["mvp"].get("googleCapabilities", [])
+
+assert not errors, errors
+assert proof["status"] == "mvp_launched"
+assert 1 <= len(capabilities) <= 2
+print("PASS:", proof["mvpUrl"])
+print("Capabilities:", [item["service"] for item in capabilities])
+PY
+```
+
+Expected result: both workflows finish without tool errors, the final status is `mvp_launched`, and Theo selects one or two product-relevant Google capabilities.
+
+### 4. Verify the interface and credential-safe export
+
+Open `http://127.0.0.1:8080/mvp/$MISSION_ID` after replacing `$MISSION_ID` with the printed value. Confirm that:
+
+1. Three product screens are navigable.
+2. The generated layout and copy match the test brief.
+3. The selected Google capability components return results.
+4. The browser console contains no JavaScript, network, API-key, or referrer errors.
+
+Download and inspect the generated code:
+
+```bash
+curl --fail --silent \
+  "http://127.0.0.1:8080/api/workspace/$MISSION_ID/code" \
+  --output /tmp/cofounder-product.zip
+
+python3 - <<'PY'
+import re
+import zipfile
+
+with zipfile.ZipFile("/tmp/cofounder-product.zip") as archive:
+    content = b"\n".join(archive.read(name) for name in archive.namelist())
+
+assert not re.search(rb"AIza[0-9A-Za-z_-]{35}", content)
+assert not re.search(rb"github_pat_[A-Za-z0-9_]{20,}", content)
+print("PASS: export contains no valid Google API key or GitHub token")
+PY
+```
+
+Expected result: the archive contains `index.html`, `product-spec.json`, `README.md`, `DEPLOY.md`, `Dockerfile`, and `nginx.conf`, with no valid credentials. Map-enabled exports contain `REPLACE_WITH_RESTRICTED_MAPS_BROWSER_KEY` instead of a live key.
+
+### 5. Optional GitHub delivery test
+
+This test requires the GitHub delivery configuration described below:
+
+```bash
+curl --fail --silent \
+  --request POST "http://127.0.0.1:8080/api/workspace/$MISSION_ID/github" \
+  --header "Content-Type: application/json" \
+  --data '{}' \
+  | python3 -m json.tool
+```
+
+Expected result: the response provides a public repository URL, a pull-request URL, and a content-addressed branch name. Repeating the request reuses the same safe delivery instead of creating a duplicate.
 
 ## Deploy to Google Cloud Run
 
@@ -139,6 +321,8 @@ The runtime service account needs these roles:
 - Cloud Datastore User
 - BigQuery Job User
 - BigQuery Data Editor
+- Cloud Translation API User
+- Service Usage Consumer
 
 Then deploy:
 
@@ -159,6 +343,13 @@ printf '%s' "$GITHUB_DELIVERY_TOKEN" | gcloud secrets create github-delivery-tok
 
 Grant the Cloud Run service account `roles/secretmanager.secretAccessor` on that secret and run `./deploy.sh` again. GitHub delivery is optional; all Google agent workflows work without it.
 
+Real Maps Platform products require two API-restricted keys:
+
+- `maps-browser-key` restricted to the Maps JavaScript API and the deployed app's HTTP referrer
+- `google-capabilities-server-key` restricted to Places, Routes, Weather, Air Quality, and Geocoding and stored only in Secret Manager
+
+The deployment script mounts these secrets as `MAPS_BROWSER_KEY` and `GOOGLE_CAPABILITIES_SERVER_KEY` when they exist.
+
 ## Configuration
 
 - `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` — Google Cloud project
@@ -166,6 +357,8 @@ Grant the Cloud Run service account `roles/secretmanager.secretAccessor` on that
 - `GEMINI_MODEL` — model; defaults to `gemini-3.5-flash`
 - `PUBLIC_BASE_URL` — deployed Cloud Run URL used for published artifacts
 - `GOOGLE_TTS_ENABLED` — enables cofounder speech
+- `MAPS_BROWSER_KEY` — referrer- and API-restricted Maps JavaScript browser key
+- `GOOGLE_CAPABILITIES_SERVER_KEY` — server-side key restricted to Places, Routes, Weather, Air Quality, and Geocoding
 - `BIGQUERY_DATASET` — mission-specific product analytics dataset; defaults to `cofounder_live`
 - `BIGQUERY_LOCATION` — BigQuery dataset location; defaults to `US`
 - `GITHUB_DELIVERY_TOKEN` — fine-grained token restricted to the delivery repository

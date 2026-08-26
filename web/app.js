@@ -486,12 +486,13 @@ function renderPack() {
     `);
   }
   if (episode.mvp?.mvpUrl) {
-    const capability = episode.mvp.googleCapability;
+    const capabilities = episode.mvp.googleCapabilities
+      || (episode.mvp.googleCapability ? [episode.mvp.googleCapability] : []);
     parts.push(`
       <div class="pack-block published">
         <h3>Working MVP · Revision ${esc(episode.mvp.revision || 1)}</h3>
         <p>${esc(episode.mvp.workflow || episode.mvp.headline || "Interactive prototype launched")}</p>
-        ${capability ? `<p><strong>${esc(capability.label || capability.service)}</strong> · ${esc(capability.rationale || "Selected by Theo for the core workflow.")}</p>` : ""}
+        ${capabilities.map((capability) => `<p><strong>${esc(capability.label || capability.service)}</strong> · ${esc(capability.rationale || "Selected by Theo for the core workflow.")}</p>`).join("")}
         <a class="page-link" href="${esc(episode.mvp.mvpUrl)}" target="_blank" rel="noreferrer">View Product Concept ↗</a>
         <small>${esc(episode.mvp.mvpUrl)}</small>
         <iframe class="site-preview" src="${esc(episode.mvp.mvpUrl)}" title="Working MVP preview"></iframe>

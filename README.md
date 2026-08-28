@@ -40,6 +40,8 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 
 The experience is a sequence of agent workflows. Each step can take one or two minutes because Maya and Theo are generating, reviewing, revising, and publishing real artifacts. Keep the page open and wait until the active button changes before continuing.
 
+> **Important — starting a new application:** Delete **all existing text** from the **Project Brief** text box first. Then enter the new application idea and click **Build it live**. Do not edit the old brief in place without clearing the entire text box.
+
 1. Open the [live application](https://nano-banana-guide-26967920041.us-central1.run.app).
 2. Enter a detailed product idea in the prompt box. Include the intended user, the problem, and the desired outcome.
 3. Choose **Auto · Theo chooses** in the Google API selector, or require one specific API. Auto mode allows one or two complementary capabilities; a specific selection requires Theo to use only that API.
@@ -53,7 +55,7 @@ The experience is a sequence of agent workflows. Each step can take one or two m
 11. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
 12. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
 
-If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. Starting a different idea in the main prompt creates a separate project and revision history.
+If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. To create a separate project and revision history, completely clear the Project Brief text box before typing the new idea.
 
 ### Landing-page workflow
 

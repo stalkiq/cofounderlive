@@ -9,6 +9,19 @@ const DISPLAY_NAMES = {
   technical: "Theo",
   director: "Studio",
 };
+const API_LABELS = {
+  maps: "Google Maps",
+  places: "Google Places",
+  routes: "Google Routes",
+  weather: "Google Weather",
+  air_quality: "Google Air Quality",
+  geocoding: "Google Geocoding",
+  translation: "Cloud Translation",
+  vision: "Cloud Vision",
+  bigquery: "BigQuery",
+  gemini: "Gemini",
+  tts: "Cloud Text-to-Speech",
+};
 
 const LOOKS = {
   creative: {
@@ -344,6 +357,10 @@ document.querySelectorAll(".talent .face").forEach((svg) => {
 const logEl = document.getElementById("log");
 const form = document.getElementById("missionForm");
 const goalEl = document.getElementById("goal");
+const apiPreferenceEl = document.getElementById("apiPreference");
+const apiSelectorEl = apiPreferenceEl.closest(".api-selector");
+const apiUsedEl = document.getElementById("apiUsed");
+const apiUsedChipsEl = document.getElementById("apiUsedChips");
 const runBtn = document.getElementById("runBtn");
 const onAirEl = document.getElementById("onAir");
 const clockEl = document.getElementById("clock");
@@ -359,6 +376,15 @@ const studioPromptEl = document.getElementById("studioPrompt");
 const studioSendEl = document.getElementById("studioSend");
 const studioCodeEl = document.getElementById("studioCode");
 const studioGithubEl = document.getElementById("studioGithub");
+const studioPreviewShellEl = document.getElementById("studioPreviewShell");
+const previewEmptyEl = document.getElementById("previewEmpty");
+const openArtifactEl = document.getElementById("openArtifact");
+const studioModelEl = document.getElementById("studioModel");
+const workflowSteps = [...document.querySelectorAll("[data-stage]")];
+const activeTaskEl = document.getElementById("activeTask");
+const transcriptEl = document.getElementById("transcript");
+const roomToggleEl = document.getElementById("roomToggle");
+const roomResizeEl = document.getElementById("roomResize");
 const episode = {
   missionId: "",
   builtIdea: "",
@@ -367,17 +393,29 @@ const episode = {
   page: null,
   mvpReview: null,
   mvp: null,
+  apiPreference: "auto",
 };
 const SAVED_IDEA_KEY = "cofounder-live-idea";
 const SAVED_PROJECT_KEY = "cofounder-live-project";
+const SAVED_API_KEY = "cofounder-live-api-preference";
 
 goalEl.value = localStorage.getItem(SAVED_IDEA_KEY) || "";
+apiPreferenceEl.value = localStorage.getItem(SAVED_API_KEY) || "auto";
+episode.apiPreference = apiPreferenceEl.value;
+apiPreferenceEl.addEventListener("change", () => {
+  episode.apiPreference = apiPreferenceEl.value;
+  localStorage.setItem(SAVED_API_KEY, apiPreferenceEl.value);
+  persistEpisode();
+});
 goalEl.addEventListener("input", () => {
   localStorage.setItem(SAVED_IDEA_KEY, goalEl.value);
   if (episode.builtIdea && goalEl.value.trim() !== episode.builtIdea) {
     runBtn.dataset.phase = "build";
     runBtn.textContent = "Build it live";
-    studioEl.hidden = true;
+    apiPreferenceEl.disabled = false;
+    apiSelectorEl.hidden = false;
+    apiUsedEl.hidden = true;
+    activeTaskEl.textContent = "New brief ready to build";
   }
 });
 
@@ -387,11 +425,77 @@ function tickClock() {
 tickClock();
 setInterval(tickClock, 1000);
 
+const STAGES = ["idea", "landing", "mvp", "refine", "deliver"];
+let taskTimer = null;
+let taskStartedAt = 0;
+
+function setWorkflowStage(stage) {
+  const activeIndex = Math.max(0, STAGES.indexOf(stage));
+  workflowSteps.forEach((step) => {
+    const index = STAGES.indexOf(step.dataset.stage);
+    step.classList.toggle("active", index === activeIndex);
+    step.classList.toggle("complete", index < activeIndex);
+  });
+}
+
+function startTask(label) {
+  clearInterval(taskTimer);
+  taskStartedAt = Date.now();
+  const update = () => {
+    const seconds = Math.floor((Date.now() - taskStartedAt) / 1000);
+    activeTaskEl.textContent = `${label} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  };
+  update();
+  taskTimer = setInterval(update, 1000);
+}
+
+function finishTask(label) {
+  clearInterval(taskTimer);
+  taskTimer = null;
+  activeTaskEl.textContent = label;
+}
+
 function setLive(on) {
   onAirEl.textContent = on ? "On air" : "Standby";
   onAirEl.classList.toggle("live", on);
   onAirEl.classList.toggle("standby", !on);
 }
+
+document.querySelectorAll("[data-preview-device]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-preview-device]").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    studioPreviewShellEl.dataset.device = button.dataset.previewDevice;
+  });
+});
+
+openArtifactEl.addEventListener("click", () => {
+  const url = openArtifactEl.dataset.url;
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+});
+
+roomToggleEl.addEventListener("click", () => {
+  const collapsed = document.body.classList.toggle("room-collapsed");
+  roomToggleEl.textContent = collapsed ? "Expand" : "Collapse";
+  roomToggleEl.setAttribute("aria-expanded", String(!collapsed));
+});
+
+roomResizeEl.addEventListener("pointerdown", (event) => {
+  if (document.body.classList.contains("room-collapsed")) return;
+  roomResizeEl.setPointerCapture(event.pointerId);
+  const resize = (moveEvent) => {
+    const height = Math.min(520, Math.max(170, window.innerHeight - moveEvent.clientY));
+    document.documentElement.style.setProperty("--room-height", `${height}px`);
+  };
+  const stop = () => {
+    roomResizeEl.removeEventListener("pointermove", resize);
+    roomResizeEl.removeEventListener("pointerup", stop);
+    roomResizeEl.removeEventListener("pointercancel", stop);
+  };
+  roomResizeEl.addEventListener("pointermove", resize);
+  roomResizeEl.addEventListener("pointerup", stop);
+  roomResizeEl.addEventListener("pointercancel", stop);
+});
 
 function setSpeaking(agent, on) {
   document.querySelectorAll(".talent").forEach((el) => {
@@ -431,6 +535,34 @@ function esc(value) {
     .replace(/"/g, "&quot;");
 }
 
+function renderReviewChanges(changes = []) {
+  return changes.map((change, index) => {
+    const area = change.area || "Product";
+    const instruction = change.instruction || change;
+    return `
+      <div class="review-change">
+        <span>${index === 0 ? "Required" : "Recommended"} · ${esc(area)}</span>
+        <p>${esc(instruction)}</p>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderApiUsage() {
+  const capabilities = episode.mvp?.googleCapabilities
+    || (episode.mvp?.googleCapability ? [episode.mvp.googleCapability] : []);
+  apiSelectorEl.hidden = capabilities.length > 0;
+  apiUsedEl.hidden = capabilities.length === 0;
+  apiUsedChipsEl.innerHTML = capabilities
+    .map((capability) => `<b>${esc(API_LABELS[capability.service] || capability.label || capability.service)}</b>`)
+    .join("");
+  apiPreferenceEl.disabled = capabilities.length > 0;
+  const preference = episode.apiPreference || episode.mvp?.apiPreference || "auto";
+  if ([...apiPreferenceEl.options].some((option) => option.value === preference)) {
+    apiPreferenceEl.value = preference;
+  }
+}
+
 function renderPack() {
   const parts = [];
   if (episode.brand) {
@@ -451,14 +583,15 @@ function renderPack() {
     `);
   }
   if (episode.review) {
-    const changes = (episode.review.changes || [])
-      .map((change) => `<li><strong>${esc(change.area || "Design")}</strong> · ${esc(change.instruction || change)}</li>`)
-      .join("");
+    const changes = renderReviewChanges(episode.review.changes);
     parts.push(`
       <div class="pack-block creative-review">
-        <h3>Creative review · ${esc(episode.review.score || "—")}/10</h3>
+        <div class="review-heading">
+          <h3>Landing-page review</h3>
+          <span class="review-score">${esc(episode.review.score || "—")}/10</span>
+        </div>
         <p>${esc(episode.review.verdict || "")}</p>
-        ${changes ? `<ul>${changes}</ul>` : ""}
+        ${changes}
       </div>
     `);
   }
@@ -469,19 +602,19 @@ function renderPack() {
         <p>${esc(episode.page.headline || "Investor landing page published")}</p>
         <a class="page-link" href="${esc(episode.page.pageUrl)}" target="_blank" rel="noreferrer">Open live landing page ↗</a>
         <small>${esc(episode.page.pageUrl)}</small>
-        <iframe class="site-preview" src="${esc(episode.page.pageUrl)}" title="Live landing-page preview"></iframe>
       </div>
     `);
   }
   if (episode.mvpReview) {
-    const changes = (episode.mvpReview.changes || [])
-      .map((change) => `<li><strong>${esc(change.area || "Product")}</strong> · ${esc(change.instruction || change)}</li>`)
-      .join("");
+    const changes = renderReviewChanges(episode.mvpReview.changes);
     parts.push(`
       <div class="pack-block creative-review">
-        <h3>MVP review · ${esc(episode.mvpReview.score || "—")}/10</h3>
+        <div class="review-heading">
+          <h3>Product review</h3>
+          <span class="review-score">${esc(episode.mvpReview.score || "—")}/10</span>
+        </div>
         <p>${esc(episode.mvpReview.verdict || "")}</p>
-        ${changes ? `<ul>${changes}</ul>` : ""}
+        ${changes}
       </div>
     `);
   }
@@ -492,10 +625,12 @@ function renderPack() {
       <div class="pack-block published">
         <h3>Working MVP · Revision ${esc(episode.mvp.revision || 1)}</h3>
         <p>${esc(episode.mvp.workflow || episode.mvp.headline || "Interactive prototype launched")}</p>
-        ${capabilities.map((capability) => `<p><strong>${esc(capability.label || capability.service)}</strong> · ${esc(capability.rationale || "Selected by Theo for the core workflow.")}</p>`).join("")}
+        <div class="capability-list">
+          ${capabilities.map((capability) => `<span class="capability-pill">${esc(capability.label || capability.service)}</span>`).join("")}
+        </div>
+        ${capabilities.map((capability) => `<p>${esc(capability.rationale || "Selected by Theo for the core workflow.")}</p>`).join("")}
         <a class="page-link" href="${esc(episode.mvp.mvpUrl)}" target="_blank" rel="noreferrer">View Product Concept ↗</a>
         <small>${esc(episode.mvp.mvpUrl)}</small>
-        <iframe class="site-preview" src="${esc(episode.mvp.mvpUrl)}" title="Working MVP preview"></iframe>
       </div>
     `);
   }
@@ -518,16 +653,46 @@ function addStudioRow(agent, message) {
 }
 
 async function syncStudio() {
-  if (!episode.missionId || !episode.mvp?.mvpUrl || Number(episode.mvp.revision || 0) < 2) {
-    studioEl.hidden = true;
+  const productReady = Boolean(episode.missionId && episode.mvp?.mvpUrl && Number(episode.mvp.revision || 0) >= 2);
+  const artifactUrl = productReady ? episode.mvp.mvpUrl : episode.page?.pageUrl;
+  const artifactRevision = productReady
+    ? `Product · revision ${Number(episode.mvp.revision || 2)}`
+    : episode.page?.pageUrl
+      ? `Landing page · revision ${Number(episode.page.revision || 1)}`
+      : "No build yet";
+
+  studioRevisionEl.textContent = artifactRevision;
+  previewEmptyEl.hidden = Boolean(artifactUrl);
+  studioPreviewEl.hidden = !artifactUrl;
+  openArtifactEl.disabled = !artifactUrl;
+  openArtifactEl.dataset.url = artifactUrl || "";
+
+  if (artifactUrl && studioPreviewEl.dataset.url !== artifactUrl) {
+    const revision = productReady ? Number(episode.mvp.revision || 2) : Number(episode.page?.revision || 1);
+    studioPreviewEl.src = `${artifactUrl}?studio=${revision}`;
+    studioPreviewEl.dataset.url = artifactUrl;
+  }
+
+  const busy = studioEl.dataset.busy === "true";
+  studioPromptEl.disabled = !productReady || busy;
+  studioSendEl.disabled = !productReady || busy;
+  studioCodeEl.disabled = !productReady || busy;
+  studioGithubEl.disabled = !productReady || busy;
+  studioModelEl.textContent = productReady ? "Gemini · Vertex AI" : "Gemini · available after MVP";
+
+  if (!productReady) {
+    studioStateEl.textContent = artifactUrl ? "Landing page ready" : "Waiting for brief";
     return;
   }
-  studioEl.hidden = false;
+  if (!busy && !["Preview updated", "Code downloaded", "PR created", "PR already ready"].includes(studioStateEl.textContent)) {
+    studioStateEl.textContent = "Product ready";
+  }
+
   const revision = Number(episode.mvp.revision || 2);
-  studioRevisionEl.textContent = `Revision ${revision}`;
   if (studioPreviewEl.dataset.revision !== String(revision)) {
     studioPreviewEl.src = `${episode.mvp.mvpUrl}?studio=${revision}`;
     studioPreviewEl.dataset.revision = String(revision);
+    studioPreviewEl.dataset.url = episode.mvp.mvpUrl;
   }
   if (studioLoadedMission === episode.missionId) return;
   studioLoadedMission = episode.missionId;
@@ -558,6 +723,15 @@ function syncEpisodeUi() {
     runBtn.dataset.phase = "open";
     runBtn.textContent = "View Product Concept ↗";
   }
+  renderApiUsage();
+  const stage = episode.mvp?.revision >= 2
+    ? "refine"
+    : episode.mvp || episode.mvpReview
+      ? "mvp"
+      : episode.page || episode.review || episode.brand
+        ? "landing"
+        : "idea";
+  setWorkflowStage(stage);
   if (episode.brand || episode.review || episode.page || episode.mvp) {
     packStatusEl.textContent = episode.mvp?.revision >= 2
       ? "Working MVP live"
@@ -585,13 +759,23 @@ function persistEpisode() {
 function ingestProof(event) {
   const proof = event.proof;
   if (!proof || typeof proof !== "object") return;
+  if (proof.apiPreference) episode.apiPreference = proof.apiPreference;
   if (proof.missionId) episode.missionId = proof.missionId;
   if (proof.id && String(proof.id).startsWith("ep_")) episode.missionId = proof.id;
   if (event.tool === "create_visual_direction") episode.brand = proof;
   if (event.tool === "review_landing_page") episode.review = proof;
   if (["publish_landing_page", "revise_landing_page"].includes(event.tool) || proof.pageUrl) episode.page = proof;
   if (event.tool === "review_mvp") episode.mvpReview = proof;
-  if (["build_mvp", "revise_mvp"].includes(event.tool) || proof.mvpUrl) episode.mvp = proof;
+  if (["build_mvp", "revise_mvp"].includes(event.tool) || proof.mvpUrl) {
+    episode.mvp = proof.mvp && typeof proof.mvp === "object"
+      ? {
+          ...proof,
+          ...proof.mvp,
+          mvpUrl: proof.mvpUrl,
+          revision: proof.revision || proof.mvp.revision || 1,
+        }
+      : proof;
+  }
   syncEpisodeUi();
   persistEpisode();
 }
@@ -599,6 +783,7 @@ function ingestProof(event) {
 function addRow(event) {
   ingestPresence(event);
   ingestProof(event);
+  logEl.querySelector(".room-empty")?.remove();
   const row = document.createElement("div");
   row.className = "row";
   const proof = event.proof ? JSON.stringify(event.proof, null, 2) : "";
@@ -673,18 +858,24 @@ async function launchMvp() {
   }
   runBtn.disabled = true;
   setLive(true);
+  setWorkflowStage("mvp");
+  startTask("Theo building product");
   packStatusEl.textContent = "Building working MVP";
   addRow({ agent: "director", type: "start", text: "Technical is turning the approved page into a working product. Creative will test it before launch." });
   try {
     const res = await fetch("/api/agent/mvp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ missionId: episode.missionId }),
+      body: JSON.stringify({
+        missionId: episode.missionId,
+        apiPreference: episode.apiPreference || "auto",
+      }),
     });
     await consumeEventStream(res);
   } finally {
     runBtn.disabled = false;
     setLive(false);
+    finishTask(episode.mvp?.revision >= 2 ? "Product ready to refine" : "Product workflow finished");
   }
 }
 
@@ -696,6 +887,9 @@ studioForm.addEventListener("submit", async (event) => {
   studioCodeEl.disabled = true;
   studioGithubEl.disabled = true;
   studioPromptEl.disabled = true;
+  studioEl.dataset.busy = "true";
+  setWorkflowStage("refine");
+  startTask("Cofounders revising product");
   studioStateEl.textContent = "Cofounders building";
   addStudioRow("Founder", instruction);
   let failed = false;
@@ -716,11 +910,10 @@ studioForm.addEventListener("submit", async (event) => {
     failed = true;
     addStudioRow("System", error.message);
   } finally {
+    studioEl.dataset.busy = "false";
     studioStateEl.textContent = failed ? "Needs attention" : "Preview updated";
-    studioSendEl.disabled = false;
-    studioCodeEl.disabled = false;
-    studioGithubEl.disabled = false;
-    studioPromptEl.disabled = false;
+    syncStudio();
+    finishTask(failed ? "Revision needs attention" : "Revision ready");
     studioPromptEl.focus();
   }
 });
@@ -759,6 +952,7 @@ studioCodeEl.addEventListener("click", async () => {
 studioGithubEl.addEventListener("click", async () => {
   if (!episode.missionId) return;
   studioGithubEl.disabled = true;
+  startTask("Theo preparing GitHub delivery");
   studioStateEl.textContent = "Creating GitHub PR";
   try {
     const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/github`, {
@@ -767,12 +961,15 @@ studioGithubEl.addEventListener("click", async () => {
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(payload.error || "GitHub delivery failed");
     studioStateEl.textContent = payload.reused ? "PR already ready" : "PR created";
+    setWorkflowStage("deliver");
+    finishTask(payload.reused ? "Delivery already ready" : "GitHub delivery ready");
     addStudioRow("Technical", payload.reused
       ? `Reopened the existing delivery for this revision: ${payload.pullRequestUrl}`
       : `Created a clean repository delivery and pull request: ${payload.pullRequestUrl}`);
     window.open(payload.pullRequestUrl, "_blank", "noopener,noreferrer");
   } catch (error) {
     studioStateEl.textContent = "GitHub delivery failed";
+    finishTask("GitHub delivery needs attention");
     addStudioRow("System", error.message);
   } finally {
     studioGithubEl.disabled = false;
@@ -832,6 +1029,8 @@ form.addEventListener("submit", async (e) => {
   runBtn.dataset.phase = "build";
   runBtn.textContent = "Build it live";
   setLive(true);
+  setWorkflowStage("landing");
+  startTask("Maya shaping landing page");
   logEl.innerHTML = "";
   Object.assign(episode, {
     missionId: "",
@@ -842,11 +1041,16 @@ form.addEventListener("submit", async (e) => {
     mvpReview: null,
     mvp: null,
   });
-  studioEl.hidden = true;
   studioLoadedMission = "";
   delete studioPreviewEl.dataset.revision;
+  delete studioPreviewEl.dataset.url;
+  studioPreviewEl.removeAttribute("src");
+  studioLogEl.innerHTML = "";
+  addStudioRow("Studio", "Building the landing page first. Product editing unlocks after the MVP review.");
   packStatusEl.textContent = "Cofounders working";
   renderPack();
+  renderApiUsage();
+  syncStudio();
   addRow({ agent: "director", type: "start", text: "Creative is shaping the idea. Technical is standing by." });
 
   try {
@@ -861,6 +1065,8 @@ form.addEventListener("submit", async (e) => {
   }
   runBtn.disabled = false;
   setLive(false);
+  finishTask(episode.page?.revision >= 2 ? "Landing page ready · Launch MVP" : "Landing workflow finished");
 });
 
 restorePreviousBuild();
+syncStudio();

@@ -29,6 +29,7 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 - Published investor landing pages with evidence guards
 - Product-specific interactive concepts rather than a fixed dashboard template
 - Automatic Google Maps, Calendar, BigQuery, or Gemini capability selection
+- Cursor-style Google API selector with Auto and selected-only modes
 - Persistent revisions and project restoration through Firestore
 - Live progress through Server-Sent Events
 - AI Build Studio for iterative product changes
@@ -41,15 +42,16 @@ The experience is a sequence of agent workflows. Each step can take one or two m
 
 1. Open the [live application](https://nano-banana-guide-26967920041.us-central1.run.app).
 2. Enter a detailed product idea in the prompt box. Include the intended user, the problem, and the desired outcome.
-3. Click **Build it live** once.
-4. Wait while Maya creates the creative direction and Theo builds the investor landing page. The live activity feed shows their tool calls and progress. Do not click the button repeatedly while the agents are working.
-5. When the landing page is complete, review its preview and published link. The main button changes to **Launch MVP**.
-6. Click **Launch MVP** and wait again. Theo builds the interactive product concept, Maya reviews it, and Theo applies the review. Theo also selects one or two relevant Google capabilities for the product.
-7. When this workflow finishes, the button changes to **View Product Concept**. Click it to open the generated product in a separate tab.
-8. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
-9. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Click **Build change** once and wait for the new revision. Theo updates the product, Maya reviews the change, and the preview refreshes when the revision is ready.
-10. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision.
-11. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
+3. Choose **Auto · Theo chooses** in the Google API selector, or require one specific API. Auto mode allows one or two complementary capabilities; a specific selection requires Theo to use only that API.
+4. Click **Build it live** once.
+5. Wait while Maya creates the creative direction and Theo builds the investor landing page. The live activity feed shows their tool calls and progress. Do not click the button repeatedly while the agents are working.
+6. When the landing page is complete, review its preview and published link. The main button changes to **Launch MVP**.
+7. Click **Launch MVP** and wait again. Theo builds the interactive product concept, Maya reviews it, and Theo applies the review. After completion, the actual Google APIs used appear beneath the Project Brief.
+8. When this workflow finishes, the button changes to **View Product Concept**. Click it to open the generated product in a separate tab.
+9. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
+10. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Click **Build change** once and wait for the new revision. Theo updates the product, Maya reviews the change, and the preview refreshes when the revision is ready.
+11. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
+12. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
 
 If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. Starting a different idea in the main prompt creates a separate project and revision history.
 
@@ -70,7 +72,7 @@ If a workflow reports **Needs attention**, read the latest activity or build-out
 
 ## Autonomous Google capabilities
 
-Theo selects up to two complementary capabilities based on the founder brief and aligns each with a compatible product screen:
+The founder can leave the selector in Auto mode so Theo selects up to two complementary capabilities, or require one specific capability. A selected API is enforced through the initial build, Maya's review, Theo's final revision, and later AI Build Studio changes.
 
 - **Google Maps JavaScript API** for real interactive world, regional, and local maps
 - **Places API** for real place searches, ratings, addresses, and map markers

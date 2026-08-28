@@ -13,6 +13,7 @@ import {
   getBigQueryCapabilityData,
   getGeospatialCapabilityData,
   googleCapabilitiesStatus,
+  normalizeGoogleCapabilityPreference,
   runGeminiCapability,
   translateCapabilityText,
 } from "./lib/google-capabilities.mjs";
@@ -96,6 +97,7 @@ app.post("/api/project/restore", async (req, res) => {
         headline: page.site?.headline || "",
         revision: page.revision || 1,
       },
+      apiPreference: normalizeGoogleCapabilityPreference(mvp?.apiPreference),
       mvpReview: mvp?.review || null,
       mvp: mvp ? {
         mvpUrl: mvpPageUrl(page.id),
@@ -103,6 +105,7 @@ app.post("/api/project/restore", async (req, res) => {
         workflow: mvp.mvp?.workflow?.title || "",
         googleCapability: mvp.mvp?.googleCapability || null,
         googleCapabilities: mvp.mvp?.googleCapabilities || (mvp.mvp?.googleCapability ? [mvp.mvp.googleCapability] : []),
+        apiPreference: normalizeGoogleCapabilityPreference(mvp.apiPreference),
         revision: mvp.revision || 1,
       } : null,
     });
@@ -244,6 +247,7 @@ app.post("/api/agent/run", async (req, res) => {
 
 app.post("/api/agent/mvp", async (req, res) => {
   const missionId = String(req.body?.missionId || "").trim();
+  const apiPreference = normalizeGoogleCapabilityPreference(req.body?.apiPreference);
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
@@ -259,7 +263,7 @@ app.post("/api/agent/mvp", async (req, res) => {
 
   try {
     send({ type: "start", agent: "director", text: "The landing page is approved. The cofounders are launching the MVP sprint." });
-    const result = await runMvpSprint(missionId, async (event) => send(event));
+    const result = await runMvpSprint(missionId, apiPreference, async (event) => send(event));
     if (!result.mission?.mvpUrl || result.mission?.status !== "mvp_launched") {
       throw new Error("The MVP sprint stopped before the final prototype was published.");
     }

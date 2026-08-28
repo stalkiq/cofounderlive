@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260826-human" />
+  <link rel="stylesheet" href="./styles.css?v=20260828-api-selector" />
 </head>
 <body>
   <div class="frame">
@@ -19,94 +19,153 @@
           <h1>Cofounder Live</h1>
         </div>
       </div>
-      <p class="lede">One idea. Two AI cofounders. From investor page to working MVP.</p>
+      <nav class="workflow-progress" id="workflowProgress" aria-label="Product workflow">
+        <span class="active" data-stage="idea"><b>01</b> Idea</span>
+        <span data-stage="landing"><b>02</b> Landing</span>
+        <span data-stage="mvp"><b>03</b> Product</span>
+        <span data-stage="refine"><b>04</b> Refine</span>
+        <span data-stage="deliver"><b>05</b> Deliver</span>
+      </nav>
       <div class="status">
         <span class="onair standby" id="onAir">Standby</span>
+        <span class="active-task" id="activeTask">Ready for an idea</span>
         <time class="clock" id="clock"></time>
       </div>
     </header>
 
-    <section class="desk" id="crew">
-      <article class="talent" data-agent="creative">
-        <div class="portrait">
-          <img src="./assets/maya-creative-cofounder.jpg" alt="Maya, the AI Creative Cofounder" />
-          <span class="portrait-status">AI</span>
-        </div>
-        <div class="third">
-          <span class="role">Maya · Creative Cofounder</span>
-          <strong>Shapes the story, brand, and visual direction</strong>
-        </div>
-      </article>
-      <article class="talent" data-agent="technical">
-        <div class="portrait">
-          <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo, the AI Technical Cofounder" />
-          <span class="portrait-status">AI</span>
-        </div>
-        <div class="third">
-          <span class="role">Theo · Technical Cofounder</span>
-          <strong>Builds the investor page, then launches the working MVP</strong>
-        </div>
-      </article>
-    </section>
+    <section class="workspace-shell">
+      <aside class="workspace-rail">
+        <div class="rail-label"><span>AI team</span><small>2 online</small></div>
+        <section class="desk" id="crew">
+          <article class="talent" data-agent="creative">
+            <div class="portrait">
+              <img src="./assets/maya-creative-cofounder.jpg" alt="Maya, the AI Creative Cofounder" />
+              <span class="portrait-status">AI</span>
+            </div>
+            <div class="third">
+              <span class="role">Maya · Creative</span>
+              <strong>Brand, story and product review</strong>
+            </div>
+          </article>
+          <article class="talent" data-agent="technical">
+            <div class="portrait">
+              <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo, the AI Technical Cofounder" />
+              <span class="portrait-status">AI</span>
+            </div>
+            <div class="third">
+              <span class="role">Theo · Technical</span>
+              <strong>Product, APIs and delivery</strong>
+            </div>
+          </article>
+        </section>
 
-    <section class="floor">
-      <div class="guest">
+        <div class="guest">
         <div class="guest-head">
           <span class="dot"></span>
-          <p>Founder · You</p>
+            <p>Project brief</p>
         </div>
-        <p class="hint">Describe the company you wish existed. Your cofounders will design it, build it, and put it live.</p>
+          <p class="hint">What should your AI cofounders build?</p>
         <form id="missionForm">
           <textarea id="goal" rows="5" placeholder="Example: An app for adult children coordinating care for aging parents. It should reduce missed appointments, medication confusion, and family stress."></textarea>
+          <label class="api-selector" for="apiPreference">
+            <span><b>Google API</b><small>Choose what Theo must use</small></span>
+            <select id="apiPreference" name="apiPreference">
+              <option value="auto">Auto · Theo chooses</option>
+              <option value="maps">Google Maps</option>
+              <option value="places">Google Places</option>
+              <option value="routes">Google Routes</option>
+              <option value="weather">Google Weather</option>
+              <option value="air_quality">Google Air Quality</option>
+              <option value="geocoding">Google Geocoding</option>
+              <option value="translation">Cloud Translation</option>
+              <option value="vision">Cloud Vision</option>
+              <option value="bigquery">BigQuery</option>
+              <option value="gemini">Gemini</option>
+              <option value="tts">Cloud Text-to-Speech</option>
+            </select>
+          </label>
           <button type="submit" id="runBtn">Build it live</button>
         </form>
-        <section class="studio" id="studio" hidden>
+          <section class="api-used" id="apiUsed" hidden>
+            <span>Google APIs used</span>
+            <div id="apiUsedChips"></div>
+          </section>
+        </div>
+      </aside>
+
+      <main class="workspace-main">
+        <section class="studio" id="studio">
           <header class="studio-bar">
             <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-            <strong>AI Build Studio</strong>
-            <span id="studioRevision">Revision 2</span>
+            <div>
+              <strong>Product canvas</strong>
+              <small>Live artifact preview</small>
+            </div>
+            <span id="studioRevision">No build yet</span>
           </header>
           <div class="studio-tabs">
             <button type="button" class="studio-tab active">Preview</button>
-            <span id="studioState">Ready</span>
-          </div>
-          <iframe id="studioPreview" class="studio-preview" title="Editable product concept preview"></iframe>
-          <div class="studio-log" id="studioLog" aria-live="polite">
-            <p><strong>Creative + Technical</strong><span>Ask us to change the product, workflow, copy, layout, or visual direction.</span></p>
-          </div>
-          <form class="studio-composer" id="studioForm">
-            <textarea id="studioPrompt" rows="3" placeholder="Ask your AI cofounders to improve the product concept…"></textarea>
-            <div>
-              <span>Gemini · Vertex AI</span>
-              <div class="studio-actions">
-                <button type="button" id="studioCode">Code ↓</button>
-                <button type="button" id="studioGithub">Create PR ↗</button>
-                <button type="submit" id="studioSend">Build change ↑</button>
-              </div>
+            <div class="device-switcher" aria-label="Preview size">
+              <button type="button" class="active" data-preview-device="desktop" aria-label="Desktop preview">Desktop</button>
+              <button type="button" data-preview-device="tablet" aria-label="Tablet preview">Tablet</button>
+              <button type="button" data-preview-device="mobile" aria-label="Mobile preview">Mobile</button>
             </div>
-          </form>
+            <span id="studioState">Ready</span>
+            <button type="button" class="open-artifact" id="openArtifact" disabled>Open ↗</button>
+          </div>
+          <div class="studio-preview-shell" id="studioPreviewShell" data-device="desktop">
+            <div class="preview-empty" id="previewEmpty">
+              <span>CL</span>
+              <h2>Your product will appear here</h2>
+              <p>Enter a brief and click <strong>Build it live</strong>. Maya and Theo will publish the landing page first, then unlock the product build.</p>
+            </div>
+            <iframe id="studioPreview" class="studio-preview" title="Editable product concept preview" hidden></iframe>
+          </div>
+          <div class="studio-workbench">
+            <section class="studio-output">
+              <header><strong>Change history</strong><span>Agent-reviewed revisions</span></header>
+              <div class="studio-log" id="studioLog" aria-live="polite">
+                <p><strong>Studio</strong><span>Build a product concept to unlock iterative changes.</span></p>
+              </div>
+            </section>
+            <form class="studio-composer" id="studioForm">
+              <label for="studioPrompt">Ask Theo to change the product</label>
+              <textarea id="studioPrompt" rows="3" placeholder="Example: Add onboarding, simplify the dashboard, and make the primary action clearer…" disabled></textarea>
+              <div>
+                <span id="studioModel">Gemini · available after MVP</span>
+                <div class="studio-actions">
+                  <button type="button" id="studioCode" disabled>Code ↓</button>
+                  <button type="button" id="studioGithub" disabled>Create PR ↗</button>
+                  <button type="submit" id="studioSend" disabled>Build change ↑</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </section>
-      </div>
+      </main>
 
-      <aside class="program">
+      <aside class="program workspace-inspector">
         <div class="program-head">
-          <h2>Build board</h2>
+          <div><span class="inspector-kicker">Inspector</span><h2>Build review</h2></div>
           <span id="packStatus">Waiting for an idea</span>
         </div>
         <div id="pack" class="pack">
-          <p class="empty">Creative’s visual direction and Technical’s published URL will appear here.</p>
+          <p class="empty">Maya’s reviews, Theo’s capabilities, and published links will appear here.</p>
         </div>
       </aside>
     </section>
 
-    <section class="transcript">
+    <section class="transcript" id="transcript">
+      <button type="button" class="room-resize" id="roomResize" aria-label="Resize Cofounder Room"></button>
       <div class="transcript-head">
-        <h2>Cofounder room</h2>
-        <span>Live build log</span>
+        <div><span class="room-presence"></span><h2>Cofounder Room</h2><span>Live build log</span></div>
+        <button type="button" id="roomToggle" aria-expanded="true">Collapse</button>
       </div>
-      <div id="log" class="log"></div>
+      <div class="transcript-body">
+        <div id="log" class="log"><p class="room-empty">Agent decisions and tool results will appear here while your product is built.</p></div>
+      </div>
     </section>
   </div>
-  <script src="./app.js?v=20260826-google-delivery"></script>
+  <script src="./app.js?v=20260828-api-selector"></script>
 </body>
 </html>

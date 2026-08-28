@@ -386,6 +386,16 @@ The application does not claim that generated sample data represents real custom
 - Durable Firestore state is necessary because Cloud Run instances are ephemeral.
 - Evidence guards are essential in startup workflows because persuasive copy can otherwise turn unverified assumptions into apparent facts.
 
+## Future Google product controls
+
+This is a roadmap possibility, not a currently implemented feature. A future version could complement the existing Google API selector with:
+
+- A **Google Product** dropdown for Firebase, Google Sheets, Drive, Calendar, Gmail, Docs, Forms, Chat, Meet, YouTube, Google Pay, Google Analytics, Looker Studio, Apps Script, Cloud Storage, Document AI, or Vertex AI
+- A **Build Platform** dropdown for Auto, Firebase, Cloud Run, or Apps Script
+- Selected-only enforcement so Theo designs the MVP around the chosen product or platform, just as the current API selector constrains Google capabilities
+
+Workspace products such as Gmail, Calendar, Drive, Docs, and Sheets would require OAuth consent, appropriate scopes, and user authorization before Theo could provide working integrations.
+
 ## Competition requirement checklist
 
 - [x] **One category selected:** Taskmaster

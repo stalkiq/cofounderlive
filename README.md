@@ -426,6 +426,7 @@ Workspace products such as Gmail, Calendar, Drive, Docs, and Sheets would requir
 
 - [x] **One category selected:** Taskmaster
 - [x] **Gemini 3.5 or newer:** Gemini 3.5 Flash through Vertex AI
+- [x] **Gemma integration:** Gemma 4 drafts in AI Build Studio; Gemini applies the validated revision
 - [x] **Approved Google agent framework:** official Google Gen AI SDK for JavaScript
 - [x] **Google Cloud infrastructure:** Cloud Run, Firestore, BigQuery, Secret Manager, and Cloud Text-to-Speech
 - [x] **Complete autonomous workflow:** agents take actions, inspect tool results, review work, revise it, and publish artifacts

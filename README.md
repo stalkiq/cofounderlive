@@ -33,6 +33,7 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 - Persistent revisions and project restoration through Firestore
 - Live progress through Server-Sent Events
 - AI Build Studio for iterative product changes
+- Gemma 4 drafting in AI Build Studio, with Gemini applying the validated revision
 - Portable ZIP exports with deployment files
 - Idempotent GitHub branches and pull requests for finished revisions
 
@@ -51,7 +52,7 @@ The experience is a sequence of agent workflows. Each step can take one or two m
 7. Click **Launch MVP** and wait again. Theo builds the interactive product concept, Maya reviews it, and Theo applies the review. After completion, the actual Google APIs used appear beneath the Project Brief.
 8. When this workflow finishes, the button changes to **View Product Concept**. Click it to open the generated product in a separate tab.
 9. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
-10. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Click **Build change** once and wait for the new revision. Theo updates the product, Maya reviews the change, and the preview refreshes when the revision is ready.
+10. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Choose **Gemini 3.5 · build** for a direct revision, or **Gemma 4 · draft then build** so Gemma proposes copy and layout alternatives before Gemini applies the change. Click **Build change** / **Draft + Build** once and wait for the new revision. The preview refreshes when the revision is ready.
 11. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
 12. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
 
@@ -105,6 +106,7 @@ There are no custom REST calls to Vertex AI and no Gemini API key. Cloud Run use
 ## Google Cloud stack
 
 - Gemini 3.5 Flash on Vertex AI through `@google/genai`
+- Gemma 4 (`gemma-4-26b-a4b-it-maas`) for AI Build Studio drafting through Vertex AI Model-as-a-Service
 - Cloud Run for the web app and agent runtime
 - Firestore for published pages, product concepts, and revision history
 - BigQuery for mission-specific sample analytics selected by Theo
@@ -359,6 +361,7 @@ The deployment script mounts these secrets as `MAPS_BROWSER_KEY` and `GOOGLE_CAP
 - `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` — Google Cloud project
 - `VERTEX_LOCATION` — Vertex AI location; defaults to `global`
 - `GEMINI_MODEL` — model; defaults to `gemini-3.5-flash`
+- `GEMMA_MODEL` — Gemma drafting model; defaults to `publishers/google/models/gemma-4-26b-a4b-it-maas`
 - `PUBLIC_BASE_URL` — deployed Cloud Run URL used for published artifacts
 - `GOOGLE_TTS_ENABLED` — enables cofounder speech
 - `MAPS_BROWSER_KEY` — referrer- and API-restricted Maps JavaScript browser key

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260828-api-selector" />
+  <link rel="stylesheet" href="./styles.css?v=20260828-gemma" />
 </head>
 <body>
   <div class="frame">
@@ -132,7 +132,13 @@
               <label for="studioPrompt">Ask Theo to change the product</label>
               <textarea id="studioPrompt" rows="3" placeholder="Example: Add onboarding, simplify the dashboard, and make the primary action clearer…" disabled></textarea>
               <div>
-                <span id="studioModel">Gemini · available after MVP</span>
+                <label class="studio-model-selector" for="studioModelSelect">
+                  <span>Studio model</span>
+                  <select id="studioModelSelect" disabled>
+                    <option value="gemini">Gemini 3.5 · build</option>
+                    <option value="gemma">Gemma 4 · draft then build</option>
+                  </select>
+                </label>
                 <div class="studio-actions">
                   <button type="button" id="studioCode" disabled>Code ↓</button>
                   <button type="button" id="studioGithub" disabled>Create PR ↗</button>
@@ -166,6 +172,6 @@
       </div>
     </section>
   </div>
-  <script src="./app.js?v=20260828-api-selector"></script>
+  <script src="./app.js?v=20260828-gemma"></script>
 </body>
 </html>

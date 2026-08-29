@@ -467,11 +467,43 @@ textarea:focus, #runBtn:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 8px 9px;
   background: #101114;
   border: 1px solid #34363c;
   border-top: 0;
   border-radius: 0 0 7px 7px;
+}
+
+.studio-model-selector {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.studio-model-selector > span {
+  color: #6f737c;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.studio-model-selector select {
+  width: 100%;
+  padding: 8px 28px 8px 9px;
+  color: #d9dbe0;
+  background: #1b1d22;
+  border: 1px solid #3a3d45;
+  border-radius: 6px;
+  cursor: pointer;
+  font: 10px "IBM Plex Mono", monospace;
+}
+
+.studio-model-selector select:disabled {
+  color: #8a8d95;
+  cursor: default;
+  opacity: 0.75;
 }
 
 .studio-composer span {
@@ -1634,9 +1666,19 @@ body.room-collapsed {
 .studio-output > header span { font-size: 9px; }
 .studio-log p { font-size: 13px; }
 .studio-log strong { font-size: 10px; }
-.studio-composer > label { font-size: 13px; }
-.studio-composer textarea { font-size: 14px; }
-.studio-composer span { font-size: 10px; }
+.studio-composer > label {
+  font-size: 13px;
+}
+.studio-composer textarea {
+  font-size: 14px;
+}
+.studio-composer span,
+.studio-model-selector > span {
+  font-size: 10px;
+}
+.studio-model-selector select {
+  font-size: 11px;
+}
 #studioCode,
 #studioGithub,
 #studioSend {

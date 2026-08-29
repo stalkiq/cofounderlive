@@ -379,7 +379,7 @@ const studioGithubEl = document.getElementById("studioGithub");
 const studioPreviewShellEl = document.getElementById("studioPreviewShell");
 const previewEmptyEl = document.getElementById("previewEmpty");
 const openArtifactEl = document.getElementById("openArtifact");
-const studioModelEl = document.getElementById("studioModel");
+const studioModelSelectEl = document.getElementById("studioModelSelect");
 const workflowSteps = [...document.querySelectorAll("[data-stage]")];
 const activeTaskEl = document.getElementById("activeTask");
 const transcriptEl = document.getElementById("transcript");
@@ -515,7 +515,7 @@ function ingestPresence(event) {
   if (event.type === "tool_start" || event.type === "studio_step") {
     setWorking(event.agent, true);
   }
-  if (["tool_done", "tool_error", "studio_plan", "studio_publish"].includes(event.type)) {
+  if (["tool_done", "tool_error", "studio_plan", "studio_publish", "studio_draft"].includes(event.type)) {
     setWorking(event.agent, false);
   }
   if (["done", "error", "studio_done"].includes(event.type)) {
@@ -678,7 +678,10 @@ async function syncStudio() {
   studioSendEl.disabled = !productReady || busy;
   studioCodeEl.disabled = !productReady || busy;
   studioGithubEl.disabled = !productReady || busy;
-  studioModelEl.textContent = productReady ? "Gemini · Vertex AI" : "Gemini · available after MVP";
+  studioModelSelectEl.disabled = !productReady || busy;
+  studioSendEl.textContent = studioModelSelectEl.value === "gemma"
+    ? "Draft + Build ↑"
+    : "Build change ↑";
 
   if (!productReady) {
     studioStateEl.textContent = artifactUrl ? "Landing page ready" : "Waiting for brief";
@@ -879,28 +882,43 @@ async function launchMvp() {
   }
 }
 
+studioModelSelectEl.addEventListener("change", () => {
+  studioSendEl.textContent = studioModelSelectEl.value === "gemma"
+    ? "Draft + Build ↑"
+    : "Build change ↑";
+});
+
 studioForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const instruction = studioPromptEl.value.trim();
   if (!instruction || !episode.missionId) return;
+  const studioModel = studioModelSelectEl.value === "gemma" ? "gemma" : "gemini";
   studioSendEl.disabled = true;
   studioCodeEl.disabled = true;
   studioGithubEl.disabled = true;
   studioPromptEl.disabled = true;
+  studioModelSelectEl.disabled = true;
   studioEl.dataset.busy = "true";
   setWorkflowStage("refine");
-  startTask("Cofounders revising product");
-  studioStateEl.textContent = "Cofounders building";
+  startTask(studioModel === "gemma" ? "Gemma drafting, Gemini building" : "Cofounders revising product");
+  studioStateEl.textContent = studioModel === "gemma" ? "Gemma drafting" : "Cofounders building";
   addStudioRow("Founder", instruction);
   let failed = false;
   try {
     const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/turn`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instruction }),
+      body: JSON.stringify({ instruction, studioModel }),
     });
     await consumeEventStream(res, (studioEvent) => {
       ingestPresence(studioEvent);
+      if (studioEvent.type === "studio_draft") {
+        studioStateEl.textContent = "Gemma draft ready";
+        const draft = studioEvent.proof || {};
+        const headlines = (draft.headlineOptions || []).slice(0, 2).join(" · ");
+        addStudioRow("Gemma", studioEvent.text + (headlines ? ` · ${headlines}` : ""));
+        return;
+      }
       if (studioEvent.text) addStudioRow(displayName(studioEvent.agent), studioEvent.text);
       if (studioEvent.proof) ingestProof(studioEvent);
       if (studioEvent.type === "error") failed = true;

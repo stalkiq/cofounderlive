@@ -6,7 +6,7 @@ import textToSpeech from "@google-cloud/text-to-speech";
 import { ZipArchive } from "archiver";
 import { runMvpSprint, runNightShift, runWatcherTick } from "./lib/agent.mjs";
 import * as memory from "./lib/memory.mjs";
-import { geminiStatus } from "./lib/gemini.mjs";
+import { geminiStatus, normalizeStudioModel } from "./lib/gemini.mjs";
 import { getWorkspaceState, runWorkspaceTurn } from "./lib/workspace.mjs";
 import {
   analyzeVisionCapability,
@@ -335,6 +335,7 @@ app.post("/api/workspace/:missionId/github", async (req, res) => {
 app.post("/api/workspace/:missionId/turn", async (req, res) => {
   const missionId = String(req.params.missionId || "").trim();
   const instruction = String(req.body?.instruction || "").trim();
+  const studioModel = normalizeStudioModel(req.body?.studioModel);
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
@@ -348,8 +349,19 @@ app.post("/api/workspace/:missionId/turn", async (req, res) => {
     res.write(`data: ${JSON.stringify(row)}\n\n`);
   };
   try {
-    send({ type: "studio_start", agent: "director", text: "The AI Build Studio is applying your request." });
-    const proof = await runWorkspaceTurn(missionId, instruction, async (event) => send(event));
+    send({
+      type: "studio_start",
+      agent: "director",
+      text: studioModel === "gemma"
+        ? "Gemma will draft alternatives, then Gemini will apply the revision."
+        : "The AI Build Studio is applying your request with Gemini.",
+    });
+    const proof = await runWorkspaceTurn(
+      missionId,
+      instruction,
+      async (event) => send(event),
+      { studioModel },
+    );
     send({ type: "studio_done", agent: "director", text: "Your product concept has been updated.", proof });
   } catch (err) {
     send({ type: "error", agent: "director", text: err.message });

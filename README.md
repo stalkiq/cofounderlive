@@ -34,6 +34,7 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 - Live progress through Server-Sent Events
 - AI Build Studio for iterative product changes
 - Gemma 4 drafting in AI Build Studio, with Gemini applying the validated revision
+- Antigravity SDK coding worker under Theo for real-app implementation and GitHub delivery
 - Portable ZIP exports with deployment files
 - Idempotent GitHub branches and pull requests for finished revisions
 
@@ -54,7 +55,7 @@ The experience is a sequence of agent workflows. Each step can take one or two m
 9. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
 10. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Choose **Gemini 3.5 · build** for a direct revision, or **Gemma 4 · draft then build** so Gemma proposes copy and layout alternatives before Gemini applies the change. Click **Build change** / **Draft + Build** once and wait for the new revision. The preview refreshes when the revision is ready.
 11. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
-12. Click **Code ↓** to download the current credential-safe codebase, or click **Create PR ↗** to deliver the current revision to the public GitHub delivery repository.
+12. Click **Code ↓** to download the current credential-safe codebase, **Create PR ↗** for a concept delivery, or use the **Antigravity** card under Project Brief so Theo's coding workers build a real app and open an implementation PR.
 
 If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. To create a separate project and revision history, completely clear the Project Brief text box before typing the new idea.
 
@@ -116,6 +117,32 @@ Implementation details:
 
 This keeps Gemini for reliable multi-step autonomy while using Gemma for fast parallel drafting inside the studio.
 
+## Antigravity integration
+
+AI Build Studio can hand real implementation work to **Theo's Antigravity coding worker**.
+
+After an MVP exists, use the **Real app builder** card under Project Brief. Click **Antigravity** to open the live build view. You can close it while Theo works and return with **View build**. Theo will:
+
+1. Open a seeded workspace from the product concept
+2. Run the **Google Antigravity SDK** (`google-antigravity`) with Vertex + Gemini 3.5 Flash
+3. Generate a product-specific deployable app (API + UI + Dockerfile) while streaming agent activity and source files into the build view
+4. Repair the generated app in the same Antigravity session if its create/save workflow is not connected to the required `/api/memory` contract
+5. Host the live preview with Firestore-backed durable memory so user-created information survives refresh
+6. Run an automated POST/GET save-and-reload check before marking the build verified
+7. Preserve the generated product UI, expose the live app, and deliver the result to GitHub under `apps/{product-slug}/`
+
+The build view includes **Activity**, **Code**, and **App preview** tabs, plus links to the live app, implementation PR, and repository folder. Implementation state, generated files, and preview data are stored under Firestore `antigravityRuns` records. Internal persistence checks are removed after verification and are not returned as user data.
+
+If the Antigravity runtime is unavailable in the container, Theo falls back to a Gemini real-app scaffold with the same durable-memory contract. A build without a client-side storage connection now fails clearly instead of replacing the generated application with a generic storage screen.
+
+Local worker:
+
+```bash
+python3 -m venv .venv-antigravity
+.venv-antigravity/bin/pip install -r requirements-antigravity.txt
+export ANTIGRAVITY_PYTHON="$PWD/.venv-antigravity/bin/python"
+```
+
 ## Approved Google agent framework
 
 The agent runtime uses the official **Google Gen AI SDK for JavaScript** (`@google/genai`). The SDK handles Vertex AI authentication, Gemini generation, structured JSON, and function calling. Cofounder Live executes the requested tools and sends their results back to Gemini for the next autonomous step.
@@ -126,6 +153,7 @@ There are no custom REST calls to Vertex AI and no Gemini API key. Cloud Run use
 
 - Gemini 3.5 Flash on Vertex AI through `@google/genai`
 - Gemma 4 (`gemma-4-26b-a4b-it-maas`) for AI Build Studio drafting through Vertex AI Model-as-a-Service
+- Google Antigravity SDK (`google-antigravity`) as Theo's coding worker for real-app implementation
 - Cloud Run for the web app and agent runtime
 - Firestore for published pages, product concepts, and revision history
 - BigQuery for mission-specific sample analytics selected by Theo
@@ -144,7 +172,9 @@ flowchart LR
     Run --> Agent[Agent orchestrator]
     Agent -->|Google Gen AI SDK| Vertex[Gemini 3.5 Flash on Vertex AI]
     Agent -->|Studio drafting| Gemma[Gemma 4 MaaS on Vertex AI]
+    Agent -->|Real-app implementation| Antigravity[Antigravity SDK coding worker]
     Gemma -->|Copy and layout draft| Agent
+    Antigravity -->|Deployable app files| GitHub
     Vertex -->|Function calls| Agent
     Agent --> Maya[Maya creative tools]
     Agent --> Theo[Theo technical tools]
@@ -383,6 +413,8 @@ The deployment script mounts these secrets as `MAPS_BROWSER_KEY` and `GOOGLE_CAP
 - `VERTEX_LOCATION` — Vertex AI location; defaults to `global`
 - `GEMINI_MODEL` — model; defaults to `gemini-3.5-flash`
 - `GEMMA_MODEL` — Gemma drafting model; defaults to `publishers/google/models/gemma-4-26b-a4b-it-maas`
+- `ANTIGRAVITY_PYTHON` — Python binary with `google-antigravity` installed; defaults to `/opt/antigravity/bin/python` in the container
+- `ANTIGRAVITY_MODEL` — model for the Antigravity worker; defaults to `gemini-3.5-flash`
 - `PUBLIC_BASE_URL` — deployed Cloud Run URL used for published artifacts
 - `GOOGLE_TTS_ENABLED` — enables cofounder speech
 - `MAPS_BROWSER_KEY` — referrer- and API-restricted Maps JavaScript browser key
@@ -427,6 +459,7 @@ Workspace products such as Gmail, Calendar, Drive, Docs, and Sheets would requir
 - [x] **One category selected:** Taskmaster
 - [x] **Gemini 3.5 or newer:** Gemini 3.5 Flash through Vertex AI
 - [x] **Gemma integration:** Gemma 4 drafts in AI Build Studio; Gemini applies the validated revision
+- [x] **Antigravity integration:** Theo can spawn an Antigravity coding worker to implement a real app and open a GitHub PR
 - [x] **Approved Google agent framework:** official Google Gen AI SDK for JavaScript
 - [x] **Google Cloud infrastructure:** Cloud Run, Firestore, BigQuery, Secret Manager, and Cloud Text-to-Speech
 - [x] **Complete autonomous workflow:** agents take actions, inspect tool results, review work, revise it, and publish artifacts

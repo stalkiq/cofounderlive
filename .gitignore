@@ -9,3 +9,8 @@ node_modules/
 npm-debug.log*
 fair-skin-woman-face.md
 lib/appstore-connect.mjs
+
+.venv-antigravity
+requirements-antigravity.lock
+__pycache__/
+*.pyc

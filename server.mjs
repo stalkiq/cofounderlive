@@ -20,6 +20,18 @@ import {
 import { buildProductFiles } from "./lib/product-export.mjs";
 import { deliverProductToGitHub, githubDeliveryStatus } from "./lib/github-delivery.mjs";
 import {
+  antigravityStatus,
+  getImplementationFiles,
+  getImplementationState,
+  resolvePreviewFile,
+  runAntigravityImplementation,
+} from "./lib/antigravity.mjs";
+import {
+  handlePreviewApi,
+  preparePreviewContent,
+  previewApiPathMatch,
+} from "./lib/preview-runtime.mjs";
+import {
   findInvestorPageByIdea,
   getInvestorPage,
   getMvpPage,
@@ -70,6 +82,7 @@ app.get("/health", (_req, res) => {
     gemini: geminiStatus(),
     googleCapabilities: googleCapabilitiesStatus(),
     githubDelivery: githubDeliveryStatus(),
+    antigravity: antigravityStatus(),
     publishing: "firestore",
     missions: memory.listMissions().length,
   });
@@ -330,6 +343,97 @@ app.post("/api/workspace/:missionId/github", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
+});
+
+app.get("/api/workspace/:missionId/implement", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const state = await getImplementationState(missionId);
+    if (!state) return res.status(404).json({ error: "No Antigravity implementation yet" });
+    return res.json(state);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/workspace/:missionId/implement/files", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const files = await getImplementationFiles(missionId);
+    if (!files) return res.status(404).json({ error: "No implementation files yet" });
+    return res.json({
+      missionId,
+      files: Object.keys(files).sort().map((filePath) => ({
+        path: filePath,
+        content: files[filePath],
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.use("/preview/:missionId", async (req, res, next) => {
+  const missionId = String(req.params.missionId || "").trim();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).send("valid missionId is required");
+  }
+  const relative = String(req.path || "/").replace(/^\/+/, "");
+  try {
+    if (previewApiPathMatch(relative)) {
+      return handlePreviewApi(missionId, relative, req, res);
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const files = await getImplementationFiles(missionId);
+    if (!files) return res.status(404).send("No Antigravity preview is available yet.");
+    const resolved = preparePreviewContent(resolvePreviewFile(files, relative), missionId);
+    if (!resolved) return res.status(404).send("Preview file not found.");
+    res.setHeader("Content-Type", resolved.contentType);
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(resolved.content);
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+});
+
+app.post("/api/workspace/:missionId/implement", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  const instruction = String(req.body?.instruction || "").trim()
+    || "Implement durable backend memory and a deployable real app for this product concept.";
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  const send = (event) => {
+    const row = memory.addEvent(event);
+    res.write(`data: ${JSON.stringify(row)}\n\n`);
+  };
+  try {
+    send({
+      type: "implement_start",
+      agent: "director",
+      text: "Theo is implementing a real app with the Antigravity coding worker.",
+    });
+    const proof = await runAntigravityImplementation(missionId, instruction, async (event) => send(event));
+    send({
+      type: "implement_done",
+      agent: "director",
+      text: "Real-app implementation is ready.",
+      proof,
+    });
+  } catch (err) {
+    send({ type: "error", agent: "director", text: err.message });
+  }
+  res.end();
 });
 
 app.post("/api/workspace/:missionId/turn", async (req, res) => {

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260828-gemma" />
+  <link rel="stylesheet" href="./styles.css?v=20260829-ag-reopen2" />
 </head>
 <body>
   <div class="frame">
@@ -91,6 +91,19 @@
             <div id="apiUsedChips"></div>
           </section>
         </div>
+
+        <section class="antigravity-card" id="antigravityCard">
+          <div class="guest-head">
+            <span class="dot"></span>
+            <p>Real app builder</p>
+          </div>
+          <p class="hint" id="antigravityHint">Unlocks after the product concept is live.</p>
+          <div class="antigravity-actions">
+            <button type="button" id="antigravityBtn" disabled>Antigravity</button>
+            <button type="button" id="antigravityOpenBtn" hidden>View build</button>
+          </div>
+          <a id="antigravityCardApp" class="antigravity-card-link" href="#" target="_blank" rel="noreferrer" hidden>Open live app ↗</a>
+        </section>
       </aside>
 
       <main class="workspace-main">
@@ -172,6 +185,100 @@
       </div>
     </section>
   </div>
-  <script src="./app.js?v=20260828-gemma"></script>
+
+  <div class="ag-modal" id="antigravityModal" hidden>
+    <div class="ag-modal-backdrop" id="antigravityBackdrop"></div>
+    <div class="ag-modal-panel ag-modal-panel-xl" role="dialog" aria-modal="true" aria-labelledby="antigravityTitle">
+      <header class="ag-modal-head">
+        <div>
+          <p class="eyebrow">Theo · Antigravity</p>
+          <h2 id="antigravityTitle">Coding agents at work</h2>
+        </div>
+        <div class="ag-head-actions">
+          <a id="antigravityApp" href="#" target="_blank" rel="noreferrer" hidden>Open live app ↗</a>
+          <a id="antigravityPr" href="#" target="_blank" rel="noreferrer" hidden>Open PR ↗</a>
+          <a id="antigravityRepo" href="#" target="_blank" rel="noreferrer" hidden>Open repo ↗</a>
+          <button type="button" id="antigravityClose">Close</button>
+        </div>
+      </header>
+
+      <div class="ag-layout">
+        <aside class="ag-side">
+          <article class="ag-agent" data-role="lead" data-worker="theo">
+            <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo" />
+            <div>
+              <strong>Theo</strong>
+              <span id="agTheoTask">Technical lead</span>
+            </div>
+            <b id="agTheoStatus">Ready</b>
+          </article>
+          <article class="ag-agent" data-role="worker" data-worker="api">
+            <span class="ag-mark">A1</span>
+            <div>
+              <strong>API agent</strong>
+              <span id="agApiTask">Backend + memory</span>
+            </div>
+            <b id="agApiStatus">Idle</b>
+          </article>
+          <article class="ag-agent" data-role="worker" data-worker="ui">
+            <span class="ag-mark">A2</span>
+            <div>
+              <strong>UI agent</strong>
+              <span id="agUiTask">Screens + forms</span>
+            </div>
+            <b id="agUiStatus">Idle</b>
+          </article>
+          <article class="ag-agent" data-role="worker" data-worker="deploy">
+            <span class="ag-mark">A3</span>
+            <div>
+              <strong>Deploy agent</strong>
+              <span id="agDeployTask">GitHub delivery</span>
+            </div>
+            <b id="agDeployStatus">Idle</b>
+          </article>
+          <div class="ag-progress">
+            <span id="antigravityStage">Waiting to start</span>
+            <div class="ag-bar"><i id="antigravityBar"></i></div>
+            <p class="ag-verify" id="antigravityVerify" hidden>Save/load verified</p>
+          </div>
+        </aside>
+
+        <section class="ag-main">
+          <div class="ag-tabs" role="tablist">
+            <button type="button" class="active" data-ag-tab="activity">Activity</button>
+            <button type="button" data-ag-tab="code">Code</button>
+            <button type="button" data-ag-tab="preview">App preview</button>
+          </div>
+          <div class="ag-pane active" data-ag-pane="activity">
+            <div class="ag-log" id="antigravityLog" aria-live="polite"></div>
+          </div>
+          <div class="ag-pane" data-ag-pane="code" hidden>
+            <div class="ag-code-shell">
+              <div class="ag-file-list" id="antigravityFiles"></div>
+              <pre class="ag-code-view" id="antigravityCode"><code>Waiting for coding agents to write files…</code></pre>
+            </div>
+          </div>
+          <div class="ag-pane" data-ag-pane="preview" hidden>
+            <div class="ag-preview-empty" id="antigravityPreviewEmpty">
+              <h3>Live app preview</h3>
+              <p>The generated app link will appear here when Antigravity finishes writing files.</p>
+            </div>
+            <iframe id="antigravityPreview" class="ag-preview-frame" title="Antigravity app preview" hidden></iframe>
+          </div>
+        </section>
+      </div>
+
+      <footer class="ag-modal-foot">
+        <div class="ag-link-row">
+          <a id="antigravityAppFoot" href="#" target="_blank" rel="noreferrer" hidden>Open live app ↗</a>
+          <a id="antigravityPrFoot" href="#" target="_blank" rel="noreferrer" hidden>Open PR ↗</a>
+          <a id="antigravityRepoFoot" href="#" target="_blank" rel="noreferrer" hidden>Open repo folder ↗</a>
+        </div>
+        <button type="button" id="antigravityCloseSecondary">Done</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="./app.js?v=20260829-ag-reopen2"></script>
 </body>
 </html>

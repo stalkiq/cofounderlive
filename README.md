@@ -97,6 +97,25 @@ AI Build Studio can package the current revision into a clean repository folder 
 
 The Cloud Run runtime requires a fine-grained GitHub token limited to the delivery repository with **Contents: Read and write** and **Pull requests: Read and write**. Store it in Secret Manager and expose it as `GITHUB_DELIVERY_TOKEN`; do not commit it or use a broad personal token.
 
+## Gemma integration
+
+AI Build Studio integrates **Gemma 4** as a drafting model alongside **Gemini 3.5 Flash**.
+
+| Studio model | Role | What happens |
+| --- | --- | --- |
+| **Gemini 3.5 · build** | Agent / builder | Maya and Theo revise the product concept directly with Gemini. |
+| **Gemma 4 · draft then build** | Fast drafter | Gemma proposes copy, headline, layout, and workflow alternatives first. Maya turns that draft into a plan. Theo applies the validated revision with Gemini. |
+
+Implementation details:
+
+- Model ID: `publishers/google/models/gemma-4-26b-a4b-it-maas`
+- Access path: Vertex AI Model-as-a-Service through the official Google Gen AI SDK (`@google/genai`)
+- Gemini remains the agent brain for tool calling, structured product specs, publish, and revision
+- Gemma drafts appear in Change history before the Gemini-backed revision is published
+- Override with `GEMMA_MODEL` if needed; the Cloud Run service already sets the default
+
+This keeps Gemini for reliable multi-step autonomy while using Gemma for fast parallel drafting inside the studio.
+
 ## Approved Google agent framework
 
 The agent runtime uses the official **Google Gen AI SDK for JavaScript** (`@google/genai`). The SDK handles Vertex AI authentication, Gemini generation, structured JSON, and function calling. Cofounder Live executes the requested tools and sends their results back to Gemini for the next autonomous step.
@@ -124,6 +143,8 @@ flowchart LR
     UI -->|Founder brief or revision| Run[Cloud Run Node.js runtime]
     Run --> Agent[Agent orchestrator]
     Agent -->|Google Gen AI SDK| Vertex[Gemini 3.5 Flash on Vertex AI]
+    Agent -->|Studio drafting| Gemma[Gemma 4 MaaS on Vertex AI]
+    Gemma -->|Copy and layout draft| Agent
     Vertex -->|Function calls| Agent
     Agent --> Maya[Maya creative tools]
     Agent --> Theo[Theo technical tools]
@@ -206,7 +227,7 @@ In a second terminal:
 curl --fail --silent http://127.0.0.1:8080/health | python3 -m json.tool
 ```
 
-Expected result: the response contains `"ok": true`, `"sdk": "@google/genai"`, the configured Gemini model, and the available Google capabilities.
+Expected result: the response contains `"ok": true`, `"sdk": "@google/genai"`, the configured Gemini model, Gemma availability under `gemini.gemma`, and the available Google capabilities.
 
 ### 3. Run the complete autonomous workflow
 

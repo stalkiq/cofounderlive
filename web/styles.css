@@ -757,15 +757,16 @@ body.room-collapsed {
 
 .status {
   display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
+  grid-template-columns: minmax(108px, auto);
+  justify-items: center;
   justify-content: end;
-  gap: 3px 10px;
+  gap: 5px;
 }
 
 .status .clock {
-  grid-column: 2;
-  text-align: right;
+  grid-column: 1;
+  width: 100%;
+  text-align: center;
 }
 
 .active-task {

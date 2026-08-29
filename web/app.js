@@ -451,7 +451,7 @@ goalEl.addEventListener("input", () => {
     apiPreferenceEl.disabled = false;
     apiSelectorEl.hidden = false;
     apiUsedEl.hidden = true;
-    activeTaskEl.textContent = "New brief ready to build";
+    if (activeTaskEl) activeTaskEl.textContent = "New brief ready to build";
   }
 });
 
@@ -479,7 +479,9 @@ function startTask(label) {
   taskStartedAt = Date.now();
   const update = () => {
     const seconds = Math.floor((Date.now() - taskStartedAt) / 1000);
-    activeTaskEl.textContent = `${label} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    if (activeTaskEl) {
+      activeTaskEl.textContent = `${label} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    }
   };
   update();
   taskTimer = setInterval(update, 1000);
@@ -488,7 +490,7 @@ function startTask(label) {
 function finishTask(label) {
   clearInterval(taskTimer);
   taskTimer = null;
-  activeTaskEl.textContent = label;
+  if (activeTaskEl) activeTaskEl.textContent = label;
 }
 
 function setLive(on) {

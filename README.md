@@ -12,7 +12,7 @@ Cofounder Live turns one founder brief into a published investor page and an int
 
 ## Hackathon track
 
-All Things Agentic · **Taskmaster** — one goal enters; deployed artifacts come out.
+All Things Agentic **Collaborative Partner**: Build an agent that leads the way and takes notes. It should ask clarifying questions, guide the user step-by-step, and have a clear way to capture feedback, so it constantly adapts to the user's unique way of thinking.
 
 This is an agentic workflow, not a chat wrapper. Gemini chooses and calls application tools, observes their results, and continues until the required artifact has been reviewed and revised.
 

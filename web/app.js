@@ -478,6 +478,7 @@ goalEl.addEventListener("input", () => {
     apiUsedEl.hidden = true;
     if (activeTaskEl) activeTaskEl.textContent = "New brief ready to build";
   }
+  syncCrewAskControls();
 });
 
 function tickClock() {
@@ -746,7 +747,7 @@ async function syncStudio() {
   studioGithubEl.disabled = !productReady || busy;
   studioModelSelectEl.disabled = !productReady || busy;
   updateAntigravityCard(productReady, busy);
-  syncCrewAskControls(busy);
+  syncCrewAskControls();
   studioSendEl.textContent = studioModelSelectEl.value === "gemma"
     ? "Draft + Build ↑"
     : "Build change ↑";
@@ -986,32 +987,28 @@ function openCrewAsk(crew) {
   if (prompt && !prompt.disabled) prompt.focus();
 }
 
-function syncCrewAskControls(busy = false) {
-  const canAsk = Boolean(episode.missionId) && !busy;
-  const canChange = Boolean(episode.missionId && episode.mvp?.mvpUrl && Number(episode.mvp.revision || 0) >= 2) && !busy;
+function syncCrewAskControls() {
+  const canUse = Boolean(episode.missionId || goalEl.value.trim());
   document.querySelectorAll(".crew-ask-form:not(.ag-theo-ask-form)").forEach((form) => {
     const prompt = form.querySelector("textarea");
     const askBtn = form.querySelector('[data-mode="ask"]');
     const changeBtn = form.querySelector('[data-mode="change"]');
-    if (prompt) prompt.disabled = !canAsk;
-    if (askBtn) askBtn.disabled = !canAsk;
-    if (changeBtn) changeBtn.disabled = !canChange;
+    if (prompt) prompt.disabled = !canUse;
+    if (askBtn) askBtn.disabled = !canUse;
+    if (changeBtn) changeBtn.disabled = !canUse;
   });
-  syncAgTheoAskControls(busy);
+  syncAgTheoAskControls();
 }
 
-function syncAgTheoAskControls(busy = false) {
+function syncAgTheoAskControls() {
   if (!agTheoAskForm) return;
-  const productReady = Boolean(episode.missionId && episode.mvp?.mvpUrl && Number(episode.mvp.revision || 0) >= 2);
-  const buildBusy = busy || agSessionStatus === "running" || agBuildInFlight;
-  const canAsk = Boolean(episode.missionId) && !buildBusy;
-  const canChange = productReady && !buildBusy;
+  const canUse = Boolean(episode.missionId || goalEl.value.trim());
   const prompt = agTheoPrompt;
   const askBtn = agTheoAskForm.querySelector('[data-mode="ask"]');
   const changeBtn = agTheoAskForm.querySelector('[data-mode="change"]');
-  if (prompt) prompt.disabled = !canAsk;
-  if (askBtn) askBtn.disabled = !canAsk;
-  if (changeBtn) changeBtn.disabled = !canChange;
+  if (prompt) prompt.disabled = !canUse;
+  if (askBtn) askBtn.disabled = !canUse;
+  if (changeBtn) changeBtn.disabled = !canUse;
 }
 
 function closeAgTheoAsk() {
@@ -1029,7 +1026,7 @@ function openAgTheoAsk() {
   }
   agTheoAsk.hidden = false;
   agTheoTrigger.setAttribute("aria-expanded", "true");
-  syncAgTheoAskControls(studioEl.dataset.busy === "true");
+  syncAgTheoAskControls();
   if (agTheoPrompt && !agTheoPrompt.disabled) agTheoPrompt.focus();
 }
 
@@ -1049,7 +1046,8 @@ function addCrewAskRow(crew, agent, message) {
 }
 
 async function submitCrewAsk(crew, mode, instruction) {
-  if (!episode.missionId || !instruction) return;
+  const idea = goalEl.value.trim() || episode.builtIdea || "";
+  if ((!episode.missionId && !idea) || !instruction) return;
   const prompt = document.getElementById(`${crew}Prompt`);
   const form = document.querySelector(`.crew-ask-form[data-crew="${crew}"]`);
   const buttons = [...(form?.querySelectorAll("button") || [])];
@@ -1062,31 +1060,38 @@ async function submitCrewAsk(crew, mode, instruction) {
     if (mode === "ask") {
       startTask(`${crew === "maya" ? "Maya" : "Theo"} answering`);
       studioStateEl.textContent = `${crew === "maya" ? "Maya" : "Theo"} thinking`;
-      const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/ask`, {
+      const res = await fetch("/api/cofounder/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction, cofounder: crew }),
+        body: JSON.stringify({
+          instruction,
+          cofounder: crew,
+          missionId: episode.missionId || "",
+          idea,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload.error || "Ask failed");
       addCrewAskRow(crew, crew === "maya" ? "Maya" : "Theo", payload.answer || "Done.");
       addStudioRow(crew === "maya" ? "Maya" : "Theo", payload.answer || "Done.");
       finishTask(`${crew === "maya" ? "Maya" : "Theo"} answered`);
-      studioStateEl.textContent = "Ready";
+      if (!studioEl.dataset.busy || studioEl.dataset.busy === "false") {
+        studioStateEl.textContent = "Ready";
+      }
       if (prompt) prompt.value = "";
       return;
     }
 
-    studioEl.dataset.busy = "true";
-    setWorkflowStage("refine");
-    startTask(`${crew === "maya" ? "Maya" : "Theo"} revising product`);
+    startTask(`${crew === "maya" ? "Maya" : "Theo"} revising`);
     studioStateEl.textContent = "Cofounders building";
-    const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/turn`, {
+    const res = await fetch("/api/cofounder/change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         instruction,
         cofounder: crew,
+        missionId: episode.missionId || "",
+        idea,
         studioModel: studioModelSelectEl.value === "gemma" ? "gemma" : "gemini",
       }),
     });
@@ -1102,7 +1107,7 @@ async function submitCrewAsk(crew, mode, instruction) {
     });
     if (failed) throw new Error("Revision needs attention");
     if (prompt) prompt.value = "";
-    addCrewAskRow(crew, crew === "maya" ? "Maya" : "Theo", "Product update published.");
+    addCrewAskRow(crew, crew === "maya" ? "Maya" : "Theo", "Change applied.");
     studioStateEl.textContent = "Preview updated";
     finishTask("Revision ready");
   } catch (error) {
@@ -1111,7 +1116,7 @@ async function submitCrewAsk(crew, mode, instruction) {
     studioStateEl.textContent = "Needs attention";
     finishTask("Needs attention");
   } finally {
-    studioEl.dataset.busy = "false";
+    syncCrewAskControls();
     syncStudio();
   }
 }
@@ -1140,7 +1145,8 @@ agTheoAskForm?.addEventListener("submit", async (event) => {
   event.stopPropagation();
   const mode = event.submitter?.dataset?.mode || "ask";
   const instruction = agTheoPrompt?.value.trim() || "";
-  if (!instruction || !episode.missionId) return;
+  const idea = goalEl.value.trim() || episode.builtIdea || "";
+  if (!instruction || (!episode.missionId && !idea)) return;
   await submitAgTheoAsk(mode, instruction);
 });
 
@@ -1150,7 +1156,8 @@ document.addEventListener("click", (event) => {
 });
 
 async function submitAgTheoAsk(mode, instruction) {
-  if (!episode.missionId || !instruction || agBuildInFlight) return;
+  const idea = goalEl.value.trim() || episode.builtIdea || "";
+  if ((!episode.missionId && !idea) || !instruction) return;
   const buttons = [...(agTheoAskForm?.querySelectorAll("button") || [])];
   buttons.forEach((button) => { button.disabled = true; });
   if (agTheoPrompt) agTheoPrompt.disabled = true;
@@ -1161,29 +1168,66 @@ async function submitAgTheoAsk(mode, instruction) {
   try {
     if (mode === "ask") {
       startTask("Theo answering");
-      studioStateEl.textContent = "Theo thinking";
       setAgWorker("theo", "Answering", true, "Reading your question");
-      const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/ask`, {
+      const res = await fetch("/api/cofounder/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction, cofounder: "theo" }),
+        body: JSON.stringify({
+          instruction,
+          cofounder: "theo",
+          missionId: episode.missionId || "",
+          idea,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload.error || "Ask failed");
       const answer = payload.answer || "Done.";
       addAgTheoAskRow("Theo", answer);
-      addAntigravityLog("Theo", answer);
+      addAntigravityLog("Theo", answer, { trust: true });
       addStudioRow("Theo", answer);
-      setAgWorker("theo", agSessionStatus === "ready" ? "Complete" : "Ready", false, "Technical lead");
+      setAgWorker(
+        "theo",
+        agSessionStatus === "running" ? "Directing" : agSessionStatus === "ready" ? "Complete" : "Ready",
+        agSessionStatus === "running",
+        agSessionStatus === "running" ? "Supervising build stages" : "Technical lead",
+      );
       finishTask("Theo answered");
-      studioStateEl.textContent = agSessionStatus === "ready" ? "Real app ready" : "Ready";
       if (agTheoPrompt) agTheoPrompt.value = "";
       return;
     }
 
     if (agTheoPrompt) agTheoPrompt.value = "";
     closeAgTheoAsk();
-    await startAntigravityBuild(instruction);
+    // Prefer Antigravity in-place revise when a real-app session exists; otherwise apply a cofounder change.
+    if (episode.mvp?.mvpUrl || agSessionStatus === "ready" || agSessionStatus === "failed" || agSessionStatus === "running" || agFileMap.size) {
+      await startAntigravityBuild(instruction, { mode: "revise" });
+    } else {
+      const res = await fetch("/api/cofounder/change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instruction,
+          cofounder: "theo",
+          missionId: episode.missionId || "",
+          idea,
+          studioModel: studioModelSelectEl.value === "gemma" ? "gemma" : "gemini",
+        }),
+      });
+      let failed = false;
+      await consumeEventStream(res, (event) => {
+        ingestPresence(event);
+        if (event.text) {
+          addStudioRow(displayName(event.agent), event.text);
+          addAntigravityLog(displayName(event.agent), event.text);
+          addAgTheoAskRow(displayName(event.agent), event.text);
+        }
+        if (event.proof) ingestProof(event);
+        if (event.type === "error") failed = true;
+      });
+      if (failed) throw new Error("Revision needs attention");
+      addAgTheoAskRow("Theo", "Change applied.");
+      finishTask("Revision ready");
+    }
   } catch (error) {
     addAgTheoAskRow("System", error.message);
     addAntigravityLog("System", error.message);
@@ -1192,7 +1236,7 @@ async function submitAgTheoAsk(mode, instruction) {
     studioStateEl.textContent = "Needs attention";
     finishTask("Needs attention");
   } finally {
-    syncAgTheoAskControls(studioEl.dataset.busy === "true");
+    syncAgTheoAskControls();
   }
 }
 
@@ -1418,8 +1462,18 @@ async function hydrateAntigravitySession(missionId) {
       setAgWorker("ui", "Complete", false, "UI ready");
       setAgWorker("deploy", state.pullRequestUrl ? "PR ready" : "Complete", false, state.pullRequestUrl ? "GitHub PR published" : "Preview published");
       setAntigravityProgress(state.verified ? "Real app delivered · save/load verified" : (state.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100, "complete");
-      addAntigravityLog("Theo", state.summary || "Previous Antigravity build restored.");
-      if (state.verified) addAntigravityLog("Theo", "Durable memory was verified for this build.");
+      const restoreLine = state.cofounderReply
+        || (state.instruction
+          ? `Previous build ready. Last request: ${String(state.instruction).slice(0, 120)}`
+          : "Previous Antigravity build restored.");
+      addAntigravityLog(
+        "Theo",
+        isAntigravityToolDump(state.cofounderReply || state.summary)
+          ? restoreLine
+          : (state.cofounderReply || state.summary || restoreLine),
+        { trust: Boolean(state.cofounderReply) },
+      );
+      if (state.verified) addAntigravityLog("System", "Durable memory was verified for this build.");
     } else if (state.status === "failed") {
       agSessionStatus = "failed";
       setAgWorker("theo", "Blocked", false, state.error || "Needs attention");
@@ -1470,9 +1524,35 @@ function setAgWorker(role, status, working = false, task = "") {
   if (task && taskMap[role]) taskMap[role].textContent = task;
 }
 
-function addAntigravityLog(actor, text) {
+function isAntigravityToolDump(text) {
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return false;
+  return (
+    cleaned.length > 420
+    || /denied by policy|pre-tool hook|confirm_run_command|architecture blueprint|listing the directory|writing package\.json|i have (?:successfully )?(?:built|updated|created)|successfully built and deployed|\{["']?denied/i.test(cleaned)
+  );
+}
+
+function shortenAntigravityMessage(text, fallback = "Build update ready.") {
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  if (isAntigravityToolDump(cleaned)) return fallback;
+  if (cleaned.length <= 360) return cleaned;
+  return `${cleaned.slice(0, 320).trim()}…`;
+}
+
+function addAntigravityLog(actor, text, options = {}) {
+  const raw = String(text || "").trim();
+  if (!raw) return;
+  const message = options.trust
+    ? (raw.length > 420 ? `${raw.slice(0, 400).trim()}…` : raw)
+    : shortenAntigravityMessage(
+      raw,
+      actor === "Theo" ? "Update applied to the live app." : "Build update ready.",
+    );
+  if (!message) return;
   const row = document.createElement("p");
-  row.innerHTML = `<strong>${esc(actor)}</strong> ${esc(text)}`;
+  row.innerHTML = `<strong>${esc(actor)}</strong> ${esc(message)}`;
   antigravityLog.prepend(row);
 }
 
@@ -1516,8 +1596,11 @@ function showAntigravityLinks(proof = {}) {
   if (proof.previewAppUrl) {
     antigravityPreviewEmpty.hidden = true;
     antigravityPreview.hidden = false;
-    if (antigravityPreview.src !== proof.previewAppUrl) {
-      antigravityPreview.src = proof.previewAppUrl;
+    const bust = proof.runId || proof.revision || Date.now();
+    const nextSrc = `${proof.previewAppUrl}${proof.previewAppUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(bust)}`;
+    if (antigravityPreview.dataset.baseUrl !== proof.previewAppUrl || proof.forceRefresh || antigravityPreview.src !== nextSrc) {
+      antigravityPreview.dataset.baseUrl = proof.previewAppUrl;
+      antigravityPreview.src = nextSrc;
     }
   }
 }
@@ -1584,36 +1667,43 @@ function reopenAntigravityBuild() {
 
 antigravityOpenBtn.addEventListener("click", reopenAntigravityBuild);
 
-async function startAntigravityBuild(instruction) {
-  if (!episode.missionId || agBuildInFlight || agSessionStatus === "running") return;
+async function startAntigravityBuild(instruction, options = {}) {
+  if (!episode.missionId) return;
   const brief = String(instruction || "").trim()
     || studioPromptEl.value.trim()
     || "Implement durable backend memory and a deployable real app for this product concept.";
+  const mode = String(options.mode || "").trim().toLowerCase() === "revise"
+    || (agFileMap.size > 0 && String(options.mode || "").trim().toLowerCase() !== "create")
+    ? "revise"
+    : "create";
 
   agBuildInFlight = true;
-  antigravityLog.innerHTML = "";
-  agFileMap.clear();
-  agActiveFile = "";
+  if (mode === "revise") {
+    // Keep existing preview/files; chat reply comes from Theo as a cofounder message.
+  } else {
+    antigravityLog.innerHTML = "";
+    agFileMap.clear();
+    agActiveFile = "";
+    antigravityCode.innerHTML = "<code>Waiting for coding agents to write files…</code>";
+    antigravityFiles.innerHTML = "";
+    antigravityPreview.hidden = true;
+    antigravityPreview.removeAttribute("src");
+    antigravityPreviewEmpty.hidden = false;
+    if (antigravityVerify) antigravityVerify.hidden = true;
+    showAntigravityLinks({});
+  }
   agSessionStatus = "running";
-  agLastProof = null;
+  if (mode !== "revise") agLastProof = null;
   agHydratedMission = episode.missionId;
-  antigravityCode.innerHTML = "<code>Waiting for coding agents to write files…</code>";
-  antigravityFiles.innerHTML = "";
-  antigravityPreview.hidden = true;
-  antigravityPreview.removeAttribute("src");
-  antigravityPreviewEmpty.hidden = false;
-  if (antigravityVerify) antigravityVerify.hidden = true;
-  showAntigravityLinks({});
-  setAgWorker("theo", "Leading", true, "Briefing Antigravity workers");
-  setAgWorker("api", "Queued", false, "Scaffolding API");
-  setAgWorker("ui", "Queued", false, "Writing screens");
+  setAgWorker("theo", mode === "revise" ? "Revising" : "Leading", true, mode === "revise" ? `Change: ${brief.slice(0, 80)}` : "Briefing Antigravity workers");
+  setAgWorker("api", "Queued", false, mode === "revise" ? "Updating API" : "Scaffolding API");
+  setAgWorker("ui", "Queued", false, mode === "revise" ? "Updating screens" : "Writing screens");
   setAgWorker("deploy", "Queued", false, "Opening PR");
   setAntigravityBeats("");
-  setAntigravityProgress("Briefing Antigravity…", 8, "briefing");
-  addAntigravityLog("Theo", "Opening Antigravity coding workers.");
+  setAntigravityProgress(mode === "revise" ? "Applying your change…" : "Briefing Antigravity…", 8, "briefing");
   addAntigravityLog("Founder", brief);
   updateAntigravityCard(true, true);
-  syncAgTheoAskControls(true);
+  syncAgTheoAskControls();
   openAntigravityModal();
   selectAntigravityTab("activity");
 
@@ -1624,23 +1714,31 @@ async function startAntigravityBuild(instruction) {
   studioModelSelectEl.disabled = true;
   studioEl.dataset.busy = "true";
   setWorkflowStage("deliver");
-  startTask("Antigravity implementing real app");
-  studioStateEl.textContent = "Antigravity building";
-  addStudioRow("Founder", `Antigravity: ${brief}`);
+  startTask(mode === "revise" ? "Antigravity applying change" : "Antigravity implementing real app");
+  studioStateEl.textContent = mode === "revise" ? "Theo revising app" : "Antigravity building";
+  addStudioRow("Founder", `Antigravity ${mode === "revise" ? "change" : "build"}: ${brief}`);
 
   let failed = false;
-  let proof = null;
+  let proof = mode === "revise" ? agLastProof : null;
   try {
     const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/implement`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instruction: brief }),
+      body: JSON.stringify({ instruction: brief, mode }),
     });
     await consumeEventStream(res, (event) => {
       ingestPresence(event);
-      if (event.text && event.type !== "implement_stage") {
+      if (event.type === "cofounder_reply" && event.text) {
+        addAntigravityLog("Theo", event.text, { trust: true });
+        addAgTheoAskRow("Theo", event.text);
+        addStudioRow("Theo", event.text);
+        return;
+      }
+      // Keep Activity as a cofounder chat: stage/agent/file noise stays in the sidebar.
+      if (["implement_stage", "implement_agent", "implement_step", "implement_file"].includes(event.type)) {
+        // still drive workers/progress below
+      } else if (event.text && event.type !== "implement_start" && event.type !== "implement_done") {
         addStudioRow(displayName(event.agent), event.text);
-        addAntigravityLog(displayName(event.agent), event.text);
       }
       if (event.type === "implement_stage") {
         const stage = event.proof?.stage || "";
@@ -1652,7 +1750,7 @@ async function startAntigravityBuild(instruction) {
           setAgWorker("api", "Scaffolding API", true, "Scaffolding API");
         } else if (stage === "writing-screens") {
           setAgWorker("api", "API scaffolded", false, "API scaffold ready");
-          setAgWorker("ui", "Writing screens", true, "Writing screens");
+          setAgWorker("ui", "Writing screens", true, mode === "revise" ? `Change: ${brief.slice(0, 80)}` : "Writing screens");
         } else if (stage === "wiring-memory") {
           setAgWorker("ui", "Screens ready", false, "Screens ready");
           setAgWorker("api", "Wiring save/load", true, "Wiring save/load");
@@ -1687,7 +1785,7 @@ async function startAntigravityBuild(instruction) {
         setAgWorker(event.proof.worker === "ui" ? "ui" : "api", "Wiring save/load", true, `Writing ${event.proof.path}`);
       }
       if (event.proof?.pullRequestUrl || event.proof?.previewAppUrl || event.proof?.runId) {
-        proof = { ...(proof || {}), ...event.proof };
+        proof = { ...(proof || {}), ...event.proof, forceRefresh: true };
         agLastProof = proof;
         showAntigravityLinks(proof);
         updateAntigravityCard(true, true);
@@ -1745,6 +1843,7 @@ antigravityBtn.addEventListener("click", async () => {
   await startAntigravityBuild(
     studioPromptEl.value.trim()
       || "Implement durable backend memory and a deployable real app for this product concept.",
+    { mode: "create" },
   );
 });
 

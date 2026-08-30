@@ -7,7 +7,7 @@ import { ZipArchive } from "archiver";
 import { runMvpSprint, runNightShift, runWatcherTick } from "./lib/agent.mjs";
 import * as memory from "./lib/memory.mjs";
 import { geminiStatus, normalizeStudioModel } from "./lib/gemini.mjs";
-import { getWorkspaceState, runCofounderAsk, runWorkspaceTurn } from "./lib/workspace.mjs";
+import { getWorkspaceState, runCofounderAsk, runCofounderChange } from "./lib/workspace.mjs";
 import {
   analyzeVisionCapability,
   getBigQueryCapabilityData,
@@ -406,6 +406,7 @@ app.post("/api/workspace/:missionId/implement", async (req, res) => {
   const missionId = String(req.params.missionId || "").trim();
   const instruction = String(req.body?.instruction || "").trim()
     || "Implement durable backend memory and a deployable real app for this product concept.";
+  const mode = String(req.body?.mode || "").trim().toLowerCase();
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
@@ -421,13 +422,22 @@ app.post("/api/workspace/:missionId/implement", async (req, res) => {
     send({
       type: "implement_start",
       agent: "director",
-      text: "Theo is implementing a real app with the Antigravity coding worker.",
+      text: mode === "revise"
+        ? "Theo is applying your change to the existing Antigravity app."
+        : "Theo is implementing a real app with the Antigravity coding worker.",
     });
-    const proof = await runAntigravityImplementation(missionId, instruction, async (event) => send(event));
+    const proof = await runAntigravityImplementation(
+      missionId,
+      instruction,
+      async (event) => send(event),
+      { mode },
+    );
     send({
       type: "implement_done",
       agent: "director",
-      text: "Real-app implementation is ready.",
+      text: mode === "revise" || proof?.mode === "revise"
+        ? "Your Antigravity change is ready."
+        : "Real-app implementation is ready.",
       proof,
     });
   } catch (err) {
@@ -441,6 +451,7 @@ app.post("/api/workspace/:missionId/turn", async (req, res) => {
   const instruction = String(req.body?.instruction || "").trim();
   const studioModel = normalizeStudioModel(req.body?.studioModel);
   const cofounder = String(req.body?.cofounder || "").trim().toLowerCase();
+  const idea = String(req.body?.idea || "").trim();
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
@@ -465,13 +476,71 @@ app.post("/api/workspace/:missionId/turn", async (req, res) => {
             ? "Gemma will draft alternatives, then Gemini will apply the revision."
             : "The AI Build Studio is applying your request with Gemini.",
     });
-    const proof = await runWorkspaceTurn(
+    const proof = await runCofounderChange(
       missionId,
       instruction,
       async (event) => send(event),
-      { studioModel, cofounder },
+      { studioModel, cofounder, idea },
     );
-    send({ type: "studio_done", agent: "director", text: "Your product concept has been updated.", proof });
+    send({ type: "studio_done", agent: "director", text: "Your change has been applied.", proof });
+  } catch (err) {
+    send({ type: "error", agent: "director", text: err.message });
+  }
+  res.end();
+});
+
+app.post("/api/cofounder/ask", async (req, res) => {
+  const missionId = String(req.body?.missionId || "").trim();
+  const instruction = String(req.body?.instruction || "").trim();
+  const cofounder = String(req.body?.cofounder || "theo").trim().toLowerCase();
+  const idea = String(req.body?.idea || "").trim();
+  if (!instruction) return res.status(400).json({ error: "instruction is required" });
+  if (missionId && !/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  try {
+    const proof = await runCofounderAsk(missionId, instruction, { cofounder, idea });
+    return res.json(proof);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/cofounder/change", async (req, res) => {
+  const missionId = String(req.body?.missionId || "").trim();
+  const instruction = String(req.body?.instruction || "").trim();
+  const studioModel = normalizeStudioModel(req.body?.studioModel);
+  const cofounder = String(req.body?.cofounder || "").trim().toLowerCase();
+  const idea = String(req.body?.idea || "").trim();
+  if (!instruction) return res.status(400).json({ error: "instruction is required" });
+  if (missionId && !/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  const send = (event) => {
+    const row = memory.addEvent(event);
+    res.write(`data: ${JSON.stringify(row)}\n\n`);
+  };
+  try {
+    send({
+      type: "studio_start",
+      agent: "director",
+      text: cofounder === "maya"
+        ? "Maya is leading this change."
+        : cofounder === "theo"
+          ? "Theo is leading this change."
+          : "Applying your cofounder change request.",
+    });
+    const proof = await runCofounderChange(
+      missionId,
+      instruction,
+      async (event) => send(event),
+      { studioModel, cofounder, idea },
+    );
+    send({ type: "studio_done", agent: "director", text: "Your change has been applied.", proof });
   } catch (err) {
     send({ type: "error", agent: "director", text: err.message });
   }
@@ -482,12 +551,13 @@ app.post("/api/workspace/:missionId/ask", async (req, res) => {
   const missionId = String(req.params.missionId || "").trim();
   const instruction = String(req.body?.instruction || "").trim();
   const cofounder = String(req.body?.cofounder || "theo").trim().toLowerCase();
+  const idea = String(req.body?.idea || "").trim();
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
   if (!instruction) return res.status(400).json({ error: "instruction is required" });
   try {
-    const proof = await runCofounderAsk(missionId, instruction, { cofounder });
+    const proof = await runCofounderAsk(missionId, instruction, { cofounder, idea });
     return res.json(proof);
   } catch (error) {
     return res.status(500).json({ error: error.message });

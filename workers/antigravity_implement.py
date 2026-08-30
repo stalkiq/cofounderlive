@@ -74,13 +74,19 @@ async def run(payload: dict) -> dict:
     location = payload.get("location") or os.environ.get("VERTEX_LOCATION") or "global"
     model = payload.get("model") or os.environ.get("ANTIGRAVITY_MODEL") or "gemini-3.5-flash"
     instruction = payload["instruction"]
+    mode = str(payload.get("mode") or "create").strip().lower()
+    revise = mode == "revise"
 
-    config = LocalAgentConfig(
-        vertex=True,
-        project=project,
-        location=location,
-        model=model,
-        system_instructions=(
+    system = (
+        "You are Theo's Antigravity coding worker inside Cofounder Live. "
+        "The workspace already contains a working multi-screen app. "
+        "Apply the founder's change request to that existing app. "
+        "Do not rebuild from scratch and do not discard unrelated working screens. "
+        "Preserve durable memory endpoints at POST/GET /api/memory unless the change requires edits. "
+        "Keep onboarding, main workflow, and settings/history. "
+        "Do not invent fake traction. Do not embed API keys or secrets."
+        if revise
+        else (
             "You are Theo's Antigravity coding worker inside Cofounder Live. "
             "Build a real, deployable, product-specific application in the current workspace. "
             "Prefer Node.js + Express, a multi-screen web UI, Dockerfile, founder-facing README, "
@@ -91,25 +97,32 @@ async def run(payload: dict) -> dict:
             "Do not invent fake traction. Do not embed API keys or secrets. "
             "Do not ship a single generic create/list storage page as the whole product. "
             "Keep the implementation focused and runnable."
-        ),
+        )
+    )
+
+    config = LocalAgentConfig(
+        vertex=True,
+        project=project,
+        location=location,
+        model=model,
+        system_instructions=system,
     )
 
     async with Agent(config) as agent:
         response = await agent.chat(instruction)
-        summary = await response.text()
+        await response.text()
         repaired = False
 
         if not workspace_uses_memory_api(workspace) or not workspace_has_product_screens(workspace):
             repair = await agent.chat(
-                "Review the application you just built. Preserve its product-specific design and copy. "
+                "Review the application in the workspace. Preserve its product-specific design and copy. "
                 "Ensure there are three distinct product areas: onboarding, main workflow, and settings/history. "
                 "Wire the main workflow create/save action to POST /api/memory with JSON data, and load saved "
                 "records with GET /api/memory into history (or an equivalent product history view). "
                 "Do not replace the app with a generic single-page storage form. "
                 "Make these fixes directly in the workspace."
             )
-            repair_summary = await repair.text()
-            summary = "\n".join(part for part in [summary, repair_summary] if part)
+            await repair.text()
             repaired = True
 
         if not workspace_has_smoke_proof(workspace):
@@ -121,9 +134,14 @@ async def run(payload: dict) -> dict:
                 "How to try it, Durable memory, and Proof it works (npm run smoke). "
                 "Also ensure package.json has scripts.smoke and scripts.test."
             )
-            proof_summary = await proof.text()
-            summary = "\n".join(part for part in [summary, proof_summary] if part)
+            await proof.text()
             repaired = True
+
+    if revise:
+        change = instruction.split("FOUNDER CHANGE REQUEST (required):")[-1].splitlines()[0].strip()[:160]
+        summary = f"Applied your change in place{': ' + change if change else '.'}"
+    else:
+        summary = "Built the multi-screen app with durable memory, smoke proof, and delivery files."
 
     files = []
     for path in sorted(workspace.rglob("*")):
@@ -131,6 +149,8 @@ async def run(payload: dict) -> dict:
             continue
         rel = str(path.relative_to(workspace))
         if rel.startswith(".git/") or "/node_modules/" in f"/{rel}" or rel.startswith("node_modules/"):
+            continue
+        if rel in {"CHANGE_REQUEST.md", "product-spec.json"}:
             continue
         if path.stat().st_size > 400_000:
             continue
@@ -144,7 +164,8 @@ async def run(payload: dict) -> dict:
         "ok": True,
         "engine": "antigravity-sdk",
         "model": model,
-        "summary": (summary or "").strip()[:4000],
+        "mode": "revise" if revise else "create",
+        "summary": (summary or "").strip()[:400],
         "files": files,
         "fileCount": len(files),
         "storageContractRepaired": repaired,

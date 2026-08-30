@@ -1507,6 +1507,7 @@ body.room-collapsed {
   color: #c7cad1;
   font-size: 13px;
   line-height: 1.45;
+  max-width: 72ch;
 }
 
 .ag-log p strong {

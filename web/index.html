@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260829-status-clock" />
+  <link rel="stylesheet" href="./styles.css?v=20260830-ag-theo-ask" />
 </head>
 <body>
   <div class="frame">
@@ -36,24 +36,50 @@
       <aside class="workspace-rail">
         <div class="rail-label"><span>AI team</span><small>2 online</small></div>
         <section class="desk" id="crew">
-          <article class="talent" data-agent="creative">
-            <div class="portrait">
-              <img src="./assets/maya-creative-cofounder.jpg" alt="Maya, the AI Creative Cofounder" />
-              <span class="portrait-status">AI</span>
-            </div>
-            <div class="third">
-              <span class="role">Maya · Creative</span>
-              <strong>Brand, story and product review</strong>
+          <article class="talent" data-agent="creative" data-crew="maya">
+            <button type="button" class="talent-trigger" id="mayaTrigger" aria-expanded="false" aria-controls="mayaAsk">
+              <div class="portrait">
+                <img src="./assets/maya-creative-cofounder.jpg" alt="Maya, the AI Creative Cofounder" />
+                <span class="portrait-status">AI</span>
+              </div>
+              <div class="third">
+                <span class="role">Maya · Creative</span>
+                <strong>Brand, story and product review</strong>
+              </div>
+            </button>
+            <div class="crew-ask" id="mayaAsk" hidden>
+              <form class="crew-ask-form" data-crew="maya">
+                <label for="mayaPrompt">Ask Maya</label>
+                <textarea id="mayaPrompt" rows="3" placeholder="Ask about brand, story, UX, or request a creative change…" disabled></textarea>
+                <div class="crew-ask-actions">
+                  <button type="submit" data-mode="ask" disabled>Ask</button>
+                  <button type="submit" data-mode="change" disabled>Build change</button>
+                </div>
+                <div class="crew-ask-log" id="mayaAskLog" aria-live="polite"></div>
+              </form>
             </div>
           </article>
-          <article class="talent" data-agent="technical">
-            <div class="portrait">
-              <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo, the AI Technical Cofounder" />
-              <span class="portrait-status">AI</span>
-            </div>
-            <div class="third">
-              <span class="role">Theo · Technical</span>
-              <strong>Product, APIs and delivery</strong>
+          <article class="talent" data-agent="technical" data-crew="theo">
+            <button type="button" class="talent-trigger" id="theoTrigger" aria-expanded="false" aria-controls="theoAsk">
+              <div class="portrait">
+                <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo, the AI Technical Cofounder" />
+                <span class="portrait-status">AI</span>
+              </div>
+              <div class="third">
+                <span class="role">Theo · Technical</span>
+                <strong>Product, APIs and delivery</strong>
+              </div>
+            </button>
+            <div class="crew-ask" id="theoAsk" hidden>
+              <form class="crew-ask-form" data-crew="theo">
+                <label for="theoPrompt">Ask Theo</label>
+                <textarea id="theoPrompt" rows="3" placeholder="Ask about product, APIs, delivery, or request a technical change…" disabled></textarea>
+                <div class="crew-ask-actions">
+                  <button type="submit" data-mode="ask" disabled>Ask</button>
+                  <button type="submit" data-mode="change" disabled>Build change</button>
+                </div>
+                <div class="crew-ask-log" id="theoAskLog" aria-live="polite"></div>
+              </form>
             </div>
           </article>
         </section>
@@ -203,13 +229,26 @@
 
       <div class="ag-layout">
         <aside class="ag-side">
-          <article class="ag-agent" data-role="lead" data-worker="theo">
-            <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo" />
-            <div>
-              <strong>Theo</strong>
-              <span id="agTheoTask">Technical lead</span>
+          <article class="ag-agent ag-agent-lead" data-role="lead" data-worker="theo">
+            <button type="button" class="ag-theo-trigger" id="agTheoTrigger" aria-expanded="false" aria-controls="agTheoAsk">
+              <img src="./assets/theo-technical-cofounder.jpg?v=20260826-brown-hair" alt="Theo" />
+              <div>
+                <strong>Theo</strong>
+                <span id="agTheoTask">Technical lead</span>
+              </div>
+              <b id="agTheoStatus">Ready</b>
+            </button>
+            <div class="ag-theo-ask" id="agTheoAsk" hidden>
+              <form class="crew-ask-form ag-theo-ask-form" id="agTheoAskForm" data-crew="theo">
+                <label for="agTheoPrompt">Ask Theo</label>
+                <textarea id="agTheoPrompt" rows="3" placeholder="Ask about the build, or request a product/app change…" disabled></textarea>
+                <div class="crew-ask-actions">
+                  <button type="submit" data-mode="ask" disabled>Ask</button>
+                  <button type="submit" data-mode="change" disabled>Build change</button>
+                </div>
+                <div class="crew-ask-log" id="agTheoAskLog" aria-live="polite"></div>
+              </form>
             </div>
-            <b id="agTheoStatus">Ready</b>
           </article>
           <article class="ag-agent" data-role="worker" data-worker="api">
             <span class="ag-mark">A1</span>
@@ -238,7 +277,14 @@
           <div class="ag-progress">
             <span id="antigravityStage">Waiting to start</span>
             <div class="ag-bar"><i id="antigravityBar"></i></div>
-            <p class="ag-verify" id="antigravityVerify" hidden>Save/load verified</p>
+            <ol class="ag-beats" id="antigravityBeats" aria-label="Build stages">
+              <li data-beat="scaffold-api">Scaffolding API</li>
+              <li data-beat="writing-screens">Writing screens</li>
+              <li data-beat="wiring-memory">Wiring save/load</li>
+              <li data-beat="verifying">Verifying persistence</li>
+              <li data-beat="opening-pr">Opening PR</li>
+            </ol>
+            <p class="ag-verify" id="antigravityVerify" hidden>Save/load verified · multi-screen + smoke proof</p>
           </div>
         </aside>
 
@@ -278,6 +324,6 @@
     </div>
   </div>
 
-  <script src="./app.js?v=20260829-status-clock"></script>
+  <script src="./app.js?v=20260830-ag-theo-ask"></script>
 </body>
 </html>

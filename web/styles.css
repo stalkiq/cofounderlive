@@ -834,11 +834,30 @@ body.room-collapsed {
 
 .talent {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 1fr;
+  align-items: stretch;
   min-height: 70px;
   background: var(--panel);
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.talent-trigger {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.talent-trigger:hover,
+.talent-trigger[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--panel) 70%, #1c1f27);
 }
 
 .talent .portrait {
@@ -874,6 +893,98 @@ body.room-collapsed {
   color: #c9c6c0;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.crew-ask {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  background: #101114;
+}
+
+.crew-ask[hidden] {
+  display: none;
+}
+
+.crew-ask-form {
+  display: grid;
+  gap: 8px;
+}
+
+.crew-ask-form label {
+  color: #8f939c;
+  font: 10px "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.crew-ask-form textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px;
+  color: #e8eaee;
+  background: #0c0d10;
+  border: 1px solid #2f323a;
+  border-radius: 8px;
+  resize: vertical;
+  font: 12px "IBM Plex Sans", sans-serif;
+  line-height: 1.45;
+}
+
+.crew-ask-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.crew-ask-actions button {
+  padding: 9px 10px;
+  color: #d8e5f2;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--technical) 40%, #3a3d45);
+  border-radius: 7px;
+  cursor: pointer;
+  font: 11px "IBM Plex Sans", sans-serif;
+  font-weight: 600;
+}
+
+.crew-ask-actions button[data-mode="change"] {
+  color: #101114;
+  background: #d8e5f2;
+  border-color: transparent;
+}
+
+.crew-ask-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.crew-ask-log {
+  display: grid;
+  gap: 6px;
+  max-height: 140px;
+  overflow: auto;
+}
+
+.crew-ask-log p {
+  margin: 0;
+  color: #b4b8c0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.crew-ask-log strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #e8eaee;
+  font-size: 10px;
+}
+
+.talent[data-agent="creative"] .crew-ask-actions button[data-mode="ask"] {
+  border-color: color-mix(in srgb, var(--creative) 45%, #3a3d45);
+}
+
+.talent[data-agent="creative"] .crew-ask-actions button[data-mode="change"] {
+  background: color-mix(in srgb, var(--creative) 78%, #d8e5f2);
 }
 
 .guest,
@@ -1166,6 +1277,60 @@ body.room-collapsed {
   border-radius: 10px;
 }
 
+.ag-agent-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ag-theo-trigger {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ag-theo-trigger:hover {
+  background: color-mix(in srgb, var(--technical) 10%, #171920);
+}
+
+.ag-theo-ask {
+  padding: 0 10px 10px;
+  border-top: 1px solid #2f323a;
+  background: #12141a;
+}
+
+.ag-theo-ask[hidden] {
+  display: none;
+}
+
+.ag-theo-ask-form {
+  padding-top: 10px;
+}
+
+.ag-theo-ask-form textarea {
+  min-height: 64px;
+  font-size: 11px;
+}
+
+.ag-theo-ask-form .crew-ask-actions button[data-mode="ask"] {
+  background: color-mix(in srgb, var(--technical) 28%, #1b1d22);
+}
+
+.ag-theo-ask-form .crew-ask-actions button[data-mode="change"] {
+  background: color-mix(in srgb, var(--technical) 55%, #1b1d22);
+}
+
 .ag-agent img,
 .ag-mark {
   width: 42px;
@@ -1233,6 +1398,50 @@ body.room-collapsed {
   height: 100%;
   background: linear-gradient(90deg, #7f9bb8, #d8e5f2);
   transition: width 0.35s ease;
+}
+
+.ag-beats {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ag-beats li {
+  position: relative;
+  padding-left: 16px;
+  color: #6f7380;
+  font: 10px "IBM Plex Mono", monospace;
+  letter-spacing: 0.02em;
+}
+
+.ag-beats li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2f323a;
+}
+
+.ag-beats li.done {
+  color: #9aa3b2;
+}
+
+.ag-beats li.done::before {
+  background: #7f9bb8;
+}
+
+.ag-beats li.active {
+  color: #d8e5f2;
+}
+
+.ag-beats li.active::before {
+  background: #d8e5f2;
+  box-shadow: 0 0 0 3px rgba(216, 229, 242, 0.16);
 }
 
 .ag-verify {

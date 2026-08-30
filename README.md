@@ -25,6 +25,7 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 ## Features
 
 - Two role-specialized, voice-enabled AI cofounders
+- Click Maya or Theo to ask a question or request a product change from that cofounder
 - Autonomous function-calling workflows with tool-result feedback
 - Published investor landing pages with evidence guards
 - Product-specific interactive concepts rather than a fixed dashboard template
@@ -35,6 +36,8 @@ Maya protects product clarity and design quality. Theo turns the approved direct
 - AI Build Studio for iterative product changes
 - Gemma 4 drafting in AI Build Studio, with Gemini applying the validated revision
 - Antigravity SDK coding worker under Theo for real-app implementation and GitHub delivery
+- Multi-screen Antigravity apps with durable save/load memory, smoke proof, and staged build beats
+- Ask Theo inside the Antigravity build view, or send a change that restarts the coding workers
 - Portable ZIP exports with deployment files
 - Idempotent GitHub branches and pull requests for finished revisions
 
@@ -53,9 +56,11 @@ The experience is a sequence of agent workflows. Each step can take one or two m
 7. Click **Launch MVP** and wait again. Theo builds the interactive product concept, Maya reviews it, and Theo applies the review. After completion, the actual Google APIs used appear beneath the Project Brief.
 8. When this workflow finishes, the button changes to **View Product Concept**. Click it to open the generated product in a separate tab.
 9. The **AI Build Studio** also appears below the result. It provides a Cursor-style workspace with the live preview, component files, revision history, and build output.
-10. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Choose **Gemini 3.5 · build** for a direct revision, or **Gemma 4 · draft then build** so Gemma proposes copy and layout alternatives before Gemini applies the change. Click **Build change** / **Draft + Build** once and wait for the new revision. The preview refreshes when the revision is ready.
-11. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
-12. Click **Code ↓** to download the current credential-safe codebase, **Create PR ↗** for a concept delivery, or use the **Antigravity** card under Project Brief so Theo's coding workers build a real app and open an implementation PR.
+10. Click **Maya** or **Theo** in the AI team rail to open their ask panel. Use **Ask** for a short cofounder answer, or **Build change** to let that cofounder lead a product revision.
+11. Enter a change for Theo in the studio prompt, such as _“Add an onboarding screen and simplify the dashboard.”_ Choose **Gemini 3.5 · build** for a direct revision, or **Gemma 4 · draft then build** so Gemma proposes copy and layout alternatives before Gemini applies the change. Click **Build change** / **Draft + Build** once and wait for the new revision. The preview refreshes when the revision is ready.
+12. Repeat the studio prompt-and-build process to continue improving the same product. Each successful change is saved as a separate revision while preserving the project's API policy.
+13. Click **Code ↓** to download the current credential-safe codebase, **Create PR ↗** for a concept delivery, or use the **Antigravity** card under Project Brief so Theo's coding workers build a real app and open an implementation PR.
+14. In the Antigravity build view, click **Theo** to ask about the implementation or send a **Build change** that restarts the coding workers with your instruction.
 
 If a workflow reports **Needs attention**, read the latest activity or build-output message before retrying. To create a separate project and revision history, completely clear the Project Brief text box before typing the new idea.
 
@@ -117,6 +122,15 @@ Implementation details:
 
 This keeps Gemini for reliable multi-step autonomy while using Gemma for fast parallel drafting inside the studio.
 
+## Cofounder ask panels
+
+Maya and Theo are interactive, not just status cards.
+
+- Click either cofounder in the workspace rail to open a dropdown.
+- **Ask** sends the question to `/api/workspace/:missionId/ask` and returns a short role-aware answer grounded in the current product context.
+- **Build change** starts an AI Build Studio turn with that cofounder leading (`cofounder=maya|theo`), so brand-led or technical-led revisions stay explicit in the activity feed.
+- Inside the Antigravity popup, Theo's card uses the same pattern: **Ask** for implementation questions, **Build change** to re-run the Antigravity coding workers with the founder's instruction.
+
 ## Antigravity integration
 
 AI Build Studio can hand real implementation work to **Theo's Antigravity coding worker**.
@@ -125,13 +139,14 @@ After an MVP exists, use the **Real app builder** card under Project Brief. Clic
 
 1. Open a seeded workspace from the product concept
 2. Run the **Google Antigravity SDK** (`google-antigravity`) with Vertex + Gemini 3.5 Flash
-3. Generate a product-specific deployable app (API + UI + Dockerfile) while streaming agent activity and source files into the build view
-4. Repair the generated app in the same Antigravity session if its create/save workflow is not connected to the required `/api/memory` contract
-5. Host the live preview with Firestore-backed durable memory so user-created information survives refresh
-6. Run an automated POST/GET save-and-reload check before marking the build verified
-7. Preserve the generated product UI, expose the live app, and deliver the result to GitHub under `apps/{product-slug}/`
+3. Generate a product-specific multi-screen deployable app (API + UI + Dockerfile) while streaming agent activity and source files into the build view
+4. Advance through meaningful stages: scaffolding API → writing screens → wiring save/load → verifying persistence → opening PR
+5. Repair the generated app in the same Antigravity session if its create/save workflow is not connected to the required `/api/memory` contract
+6. Host the live preview with Firestore-backed durable memory so user-created information survives refresh
+7. Require onboarding → workflow → settings/history screens plus an automated smoke/save-reload proof before marking the build verified
+8. Preserve the generated product UI, expose the live app, and deliver the result to GitHub under `apps/{product-slug}/` on the Antigravity branch
 
-The build view includes **Activity**, **Code**, and **App preview** tabs, plus links to the live app, implementation PR, and repository folder. Implementation state, generated files, and preview data are stored under Firestore `antigravityRuns` records. Internal persistence checks are removed after verification and are not returned as user data.
+The build view includes **Activity**, **Code**, and **App preview** tabs, plus links to the live app, implementation PR, and repository folder on the active build branch. Click Theo in that view to ask questions or request another implementation pass. Implementation state, generated files, and preview data are stored under Firestore `antigravityRuns` records. Internal persistence checks are removed after verification and are not returned as user data.
 
 If the Antigravity runtime is unavailable in the container, Theo falls back to a Gemini real-app scaffold with the same durable-memory contract. A build without a client-side storage connection now fails clearly instead of replacing the generated application with a generic storage screen.
 

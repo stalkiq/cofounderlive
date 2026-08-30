@@ -373,6 +373,14 @@ const studioStateEl = document.getElementById("studioState");
 const studioLogEl = document.getElementById("studioLog");
 const studioForm = document.getElementById("studioForm");
 const studioPromptEl = document.getElementById("studioPrompt");
+const mayaTrigger = document.getElementById("mayaTrigger");
+const theoTrigger = document.getElementById("theoTrigger");
+const mayaAsk = document.getElementById("mayaAsk");
+const theoAsk = document.getElementById("theoAsk");
+const mayaPromptEl = document.getElementById("mayaPrompt");
+const theoPromptEl = document.getElementById("theoPrompt");
+const mayaAskLog = document.getElementById("mayaAskLog");
+const theoAskLog = document.getElementById("theoAskLog");
 const studioSendEl = document.getElementById("studioSend");
 const studioCodeEl = document.getElementById("studioCode");
 const studioGithubEl = document.getElementById("studioGithub");
@@ -392,8 +400,19 @@ const antigravityCloseSecondary = document.getElementById("antigravityCloseSecon
 const antigravityLog = document.getElementById("antigravityLog");
 const antigravityStage = document.getElementById("antigravityStage");
 const antigravityBar = document.getElementById("antigravityBar");
+const antigravityBeats = document.getElementById("antigravityBeats");
 const antigravityVerify = document.getElementById("antigravityVerify");
 const antigravityPr = document.getElementById("antigravityPr");
+const AG_BEAT_ORDER = ["scaffold-api", "writing-screens", "wiring-memory", "verifying", "opening-pr"];
+const AG_STAGE_META = {
+  briefing: { label: "Briefing Antigravity…", percent: 8 },
+  "scaffold-api": { label: "Scaffolding API", percent: 22 },
+  "writing-screens": { label: "Writing screens", percent: 42 },
+  "wiring-memory": { label: "Wiring save/load", percent: 62 },
+  verifying: { label: "Verifying persistence", percent: 82 },
+  "opening-pr": { label: "Opening PR", percent: 92 },
+  complete: { label: "Real app delivered", percent: 100 },
+};
 const antigravityApp = document.getElementById("antigravityApp");
 const antigravityRepo = document.getElementById("antigravityRepo");
 const antigravityPrFoot = document.getElementById("antigravityPrFoot");
@@ -411,11 +430,17 @@ const agTheoTask = document.getElementById("agTheoTask");
 const agApiTask = document.getElementById("agApiTask");
 const agUiTask = document.getElementById("agUiTask");
 const agDeployTask = document.getElementById("agDeployTask");
+const agTheoTrigger = document.getElementById("agTheoTrigger");
+const agTheoAsk = document.getElementById("agTheoAsk");
+const agTheoPrompt = document.getElementById("agTheoPrompt");
+const agTheoAskForm = document.getElementById("agTheoAskForm");
+const agTheoAskLog = document.getElementById("agTheoAskLog");
 const agFileMap = new Map();
 let agActiveFile = "";
 let agSessionStatus = "idle";
 let agLastProof = null;
 let agHydratedMission = "";
+let agBuildInFlight = false;
 const workflowSteps = [...document.querySelectorAll("[data-stage]")];
 const activeTaskEl = document.getElementById("activeTask");
 const transcriptEl = document.getElementById("transcript");
@@ -721,6 +746,7 @@ async function syncStudio() {
   studioGithubEl.disabled = !productReady || busy;
   studioModelSelectEl.disabled = !productReady || busy;
   updateAntigravityCard(productReady, busy);
+  syncCrewAskControls(busy);
   studioSendEl.textContent = studioModelSelectEl.value === "gemma"
     ? "Draft + Build ↑"
     : "Build change ↑";
@@ -935,6 +961,241 @@ studioModelSelectEl.addEventListener("change", () => {
     : "Build change ↑";
 });
 
+function closeCrewAskPanels(except = "") {
+  document.querySelectorAll(".talent").forEach((card) => {
+    const crew = card.dataset.crew;
+    const panel = document.getElementById(`${crew}Ask`);
+    const trigger = document.getElementById(`${crew}Trigger`);
+    if (!panel || !trigger) return;
+    if (except && crew === except) return;
+    panel.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  });
+}
+
+function openCrewAsk(crew) {
+  const panel = document.getElementById(`${crew}Ask`);
+  const trigger = document.getElementById(`${crew}Trigger`);
+  const prompt = document.getElementById(`${crew}Prompt`);
+  if (!panel || !trigger) return;
+  const willOpen = panel.hidden;
+  closeCrewAskPanels();
+  if (!willOpen) return;
+  panel.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  if (prompt && !prompt.disabled) prompt.focus();
+}
+
+function syncCrewAskControls(busy = false) {
+  const canAsk = Boolean(episode.missionId) && !busy;
+  const canChange = Boolean(episode.missionId && episode.mvp?.mvpUrl && Number(episode.mvp.revision || 0) >= 2) && !busy;
+  document.querySelectorAll(".crew-ask-form:not(.ag-theo-ask-form)").forEach((form) => {
+    const prompt = form.querySelector("textarea");
+    const askBtn = form.querySelector('[data-mode="ask"]');
+    const changeBtn = form.querySelector('[data-mode="change"]');
+    if (prompt) prompt.disabled = !canAsk;
+    if (askBtn) askBtn.disabled = !canAsk;
+    if (changeBtn) changeBtn.disabled = !canChange;
+  });
+  syncAgTheoAskControls(busy);
+}
+
+function syncAgTheoAskControls(busy = false) {
+  if (!agTheoAskForm) return;
+  const productReady = Boolean(episode.missionId && episode.mvp?.mvpUrl && Number(episode.mvp.revision || 0) >= 2);
+  const buildBusy = busy || agSessionStatus === "running" || agBuildInFlight;
+  const canAsk = Boolean(episode.missionId) && !buildBusy;
+  const canChange = productReady && !buildBusy;
+  const prompt = agTheoPrompt;
+  const askBtn = agTheoAskForm.querySelector('[data-mode="ask"]');
+  const changeBtn = agTheoAskForm.querySelector('[data-mode="change"]');
+  if (prompt) prompt.disabled = !canAsk;
+  if (askBtn) askBtn.disabled = !canAsk;
+  if (changeBtn) changeBtn.disabled = !canChange;
+}
+
+function closeAgTheoAsk() {
+  if (!agTheoAsk || !agTheoTrigger) return;
+  agTheoAsk.hidden = true;
+  agTheoTrigger.setAttribute("aria-expanded", "false");
+}
+
+function openAgTheoAsk() {
+  if (!agTheoAsk || !agTheoTrigger) return;
+  const willOpen = agTheoAsk.hidden;
+  if (!willOpen) {
+    closeAgTheoAsk();
+    return;
+  }
+  agTheoAsk.hidden = false;
+  agTheoTrigger.setAttribute("aria-expanded", "true");
+  syncAgTheoAskControls(studioEl.dataset.busy === "true");
+  if (agTheoPrompt && !agTheoPrompt.disabled) agTheoPrompt.focus();
+}
+
+function addAgTheoAskRow(agent, message) {
+  if (!agTheoAskLog) return;
+  const row = document.createElement("p");
+  row.innerHTML = `<strong>${esc(agent)}</strong>${esc(message)}`;
+  agTheoAskLog.prepend(row);
+}
+
+function addCrewAskRow(crew, agent, message) {
+  const log = document.getElementById(`${crew}AskLog`);
+  if (!log) return;
+  const row = document.createElement("p");
+  row.innerHTML = `<strong>${esc(agent)}</strong>${esc(message)}`;
+  log.prepend(row);
+}
+
+async function submitCrewAsk(crew, mode, instruction) {
+  if (!episode.missionId || !instruction) return;
+  const prompt = document.getElementById(`${crew}Prompt`);
+  const form = document.querySelector(`.crew-ask-form[data-crew="${crew}"]`);
+  const buttons = [...(form?.querySelectorAll("button") || [])];
+  buttons.forEach((button) => { button.disabled = true; });
+  if (prompt) prompt.disabled = true;
+  addCrewAskRow(crew, "You", instruction);
+  addStudioRow("Founder", `${crew === "maya" ? "Maya" : "Theo"}: ${instruction}`);
+
+  try {
+    if (mode === "ask") {
+      startTask(`${crew === "maya" ? "Maya" : "Theo"} answering`);
+      studioStateEl.textContent = `${crew === "maya" ? "Maya" : "Theo"} thinking`;
+      const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction, cofounder: crew }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Ask failed");
+      addCrewAskRow(crew, crew === "maya" ? "Maya" : "Theo", payload.answer || "Done.");
+      addStudioRow(crew === "maya" ? "Maya" : "Theo", payload.answer || "Done.");
+      finishTask(`${crew === "maya" ? "Maya" : "Theo"} answered`);
+      studioStateEl.textContent = "Ready";
+      if (prompt) prompt.value = "";
+      return;
+    }
+
+    studioEl.dataset.busy = "true";
+    setWorkflowStage("refine");
+    startTask(`${crew === "maya" ? "Maya" : "Theo"} revising product`);
+    studioStateEl.textContent = "Cofounders building";
+    const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/turn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instruction,
+        cofounder: crew,
+        studioModel: studioModelSelectEl.value === "gemma" ? "gemma" : "gemini",
+      }),
+    });
+    let failed = false;
+    await consumeEventStream(res, (studioEvent) => {
+      ingestPresence(studioEvent);
+      if (studioEvent.text) {
+        addStudioRow(displayName(studioEvent.agent), studioEvent.text);
+        addCrewAskRow(crew, displayName(studioEvent.agent), studioEvent.text);
+      }
+      if (studioEvent.proof) ingestProof(studioEvent);
+      if (studioEvent.type === "error") failed = true;
+    });
+    if (failed) throw new Error("Revision needs attention");
+    if (prompt) prompt.value = "";
+    addCrewAskRow(crew, crew === "maya" ? "Maya" : "Theo", "Product update published.");
+    studioStateEl.textContent = "Preview updated";
+    finishTask("Revision ready");
+  } catch (error) {
+    addCrewAskRow(crew, "System", error.message);
+    addStudioRow("System", error.message);
+    studioStateEl.textContent = "Needs attention";
+    finishTask("Needs attention");
+  } finally {
+    studioEl.dataset.busy = "false";
+    syncStudio();
+  }
+}
+
+mayaTrigger?.addEventListener("click", () => openCrewAsk("maya"));
+theoTrigger?.addEventListener("click", () => openCrewAsk("theo"));
+agTheoTrigger?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openAgTheoAsk();
+});
+
+document.querySelectorAll(".crew-ask-form:not(.ag-theo-ask-form)").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const crew = form.dataset.crew;
+    const mode = event.submitter?.dataset?.mode || "ask";
+    const prompt = document.getElementById(`${crew}Prompt`);
+    const instruction = prompt?.value.trim() || "";
+    if (!instruction) return;
+    await submitCrewAsk(crew, mode, instruction);
+  });
+});
+
+agTheoAskForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const mode = event.submitter?.dataset?.mode || "ask";
+  const instruction = agTheoPrompt?.value.trim() || "";
+  if (!instruction || !episode.missionId) return;
+  await submitAgTheoAsk(mode, instruction);
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#crew")) closeCrewAskPanels();
+  if (!event.target.closest(".ag-agent-lead")) closeAgTheoAsk();
+});
+
+async function submitAgTheoAsk(mode, instruction) {
+  if (!episode.missionId || !instruction || agBuildInFlight) return;
+  const buttons = [...(agTheoAskForm?.querySelectorAll("button") || [])];
+  buttons.forEach((button) => { button.disabled = true; });
+  if (agTheoPrompt) agTheoPrompt.disabled = true;
+  addAgTheoAskRow("You", instruction);
+  addAntigravityLog("Founder", instruction);
+  selectAntigravityTab("activity");
+
+  try {
+    if (mode === "ask") {
+      startTask("Theo answering");
+      studioStateEl.textContent = "Theo thinking";
+      setAgWorker("theo", "Answering", true, "Reading your question");
+      const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction, cofounder: "theo" }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Ask failed");
+      const answer = payload.answer || "Done.";
+      addAgTheoAskRow("Theo", answer);
+      addAntigravityLog("Theo", answer);
+      addStudioRow("Theo", answer);
+      setAgWorker("theo", agSessionStatus === "ready" ? "Complete" : "Ready", false, "Technical lead");
+      finishTask("Theo answered");
+      studioStateEl.textContent = agSessionStatus === "ready" ? "Real app ready" : "Ready";
+      if (agTheoPrompt) agTheoPrompt.value = "";
+      return;
+    }
+
+    if (agTheoPrompt) agTheoPrompt.value = "";
+    closeAgTheoAsk();
+    await startAntigravityBuild(instruction);
+  } catch (error) {
+    addAgTheoAskRow("System", error.message);
+    addAntigravityLog("System", error.message);
+    addStudioRow("System", error.message);
+    setAgWorker("theo", "Blocked", false, error.message);
+    studioStateEl.textContent = "Needs attention";
+    finishTask("Needs attention");
+  } finally {
+    syncAgTheoAskControls(studioEl.dataset.busy === "true");
+  }
+}
+
 studioForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const instruction = studioPromptEl.value.trim();
@@ -1086,7 +1347,8 @@ function updateAntigravityCard(productReady, busy = false) {
     antigravityBtn.dataset.mode = "start";
   }
 
-  antigravityOpenBtn.hidden = !canReopen;
+  // While running, the primary button is already "View build" — hide the duplicate.
+  antigravityOpenBtn.hidden = !(canReopen && agSessionStatus !== "running");
   antigravityOpenBtn.textContent = "View build";
   antigravityOpenBtn.disabled = false;
 
@@ -1155,7 +1417,7 @@ async function hydrateAntigravitySession(missionId) {
       setAgWorker("api", "Complete", false, state.verified ? "Save/load verified" : "Backend ready");
       setAgWorker("ui", "Complete", false, "UI ready");
       setAgWorker("deploy", state.pullRequestUrl ? "PR ready" : "Complete", false, state.pullRequestUrl ? "GitHub PR published" : "Preview published");
-      setAntigravityProgress(state.verified ? "Real app delivered · save/load verified" : (state.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100);
+      setAntigravityProgress(state.verified ? "Real app delivered · save/load verified" : (state.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100, "complete");
       addAntigravityLog("Theo", state.summary || "Previous Antigravity build restored.");
       if (state.verified) addAntigravityLog("Theo", "Durable memory was verified for this build.");
     } else if (state.status === "failed") {
@@ -1166,7 +1428,7 @@ async function hydrateAntigravitySession(missionId) {
     } else if (state.status === "running") {
       // Server still marked running from an older attempt; keep local UI reopenable.
       agSessionStatus = "ready";
-      setAntigravityProgress("Previous build available", 100);
+      setAntigravityProgress("Previous build available", 100, "complete");
     }
 
     const filesRes = await fetch(`/api/workspace/${encodeURIComponent(missionId)}/implement/files`);
@@ -1214,9 +1476,22 @@ function addAntigravityLog(actor, text) {
   antigravityLog.prepend(row);
 }
 
-function setAntigravityProgress(label, percent) {
-  antigravityStage.textContent = label;
-  antigravityBar.style.width = `${Math.max(8, Math.min(100, percent))}%`;
+function setAntigravityBeats(stage = "") {
+  if (!antigravityBeats) return;
+  const activeIndex = AG_BEAT_ORDER.indexOf(stage);
+  antigravityBeats.querySelectorAll("[data-beat]").forEach((item) => {
+    const beat = item.dataset.beat;
+    const beatIndex = AG_BEAT_ORDER.indexOf(beat);
+    item.classList.toggle("active", beat === stage);
+    item.classList.toggle("done", stage === "complete" || (activeIndex >= 0 && beatIndex >= 0 && beatIndex < activeIndex));
+  });
+}
+
+function setAntigravityProgress(label, percent, stage = "") {
+  const meta = stage ? AG_STAGE_META[stage] : null;
+  antigravityStage.textContent = label || meta?.label || "Working…";
+  antigravityBar.style.width = `${Math.max(8, Math.min(100, percent ?? meta?.percent ?? 12))}%`;
+  if (stage) setAntigravityBeats(stage);
 }
 
 function setAgLink(anchor, url) {
@@ -1309,18 +1584,13 @@ function reopenAntigravityBuild() {
 
 antigravityOpenBtn.addEventListener("click", reopenAntigravityBuild);
 
-antigravityBtn.addEventListener("click", async () => {
-  if (!episode.missionId || antigravityBtn.disabled) return;
-
-  // While a build is running, this button means "come back to the live build".
-  if (agSessionStatus === "running" || antigravityBtn.dataset.mode === "reopen") {
-    reopenAntigravityBuild();
-    return;
-  }
-
-  const instruction = studioPromptEl.value.trim()
+async function startAntigravityBuild(instruction) {
+  if (!episode.missionId || agBuildInFlight || agSessionStatus === "running") return;
+  const brief = String(instruction || "").trim()
+    || studioPromptEl.value.trim()
     || "Implement durable backend memory and a deployable real app for this product concept.";
 
+  agBuildInFlight = true;
   antigravityLog.innerHTML = "";
   agFileMap.clear();
   agActiveFile = "";
@@ -1335,12 +1605,15 @@ antigravityBtn.addEventListener("click", async () => {
   if (antigravityVerify) antigravityVerify.hidden = true;
   showAntigravityLinks({});
   setAgWorker("theo", "Leading", true, "Briefing Antigravity workers");
-  setAgWorker("api", "Queued", false, "Backend + memory");
-  setAgWorker("ui", "Queued", false, "Screens + forms");
-  setAgWorker("deploy", "Queued", false, "GitHub delivery");
-  setAntigravityProgress("Theo is briefing Antigravity…", 12);
+  setAgWorker("api", "Queued", false, "Scaffolding API");
+  setAgWorker("ui", "Queued", false, "Writing screens");
+  setAgWorker("deploy", "Queued", false, "Opening PR");
+  setAntigravityBeats("");
+  setAntigravityProgress("Briefing Antigravity…", 8, "briefing");
   addAntigravityLog("Theo", "Opening Antigravity coding workers.");
+  addAntigravityLog("Founder", brief);
   updateAntigravityCard(true, true);
+  syncAgTheoAskControls(true);
   openAntigravityModal();
   selectAntigravityTab("activity");
 
@@ -1353,7 +1626,7 @@ antigravityBtn.addEventListener("click", async () => {
   setWorkflowStage("deliver");
   startTask("Antigravity implementing real app");
   studioStateEl.textContent = "Antigravity building";
-  addStudioRow("Founder", `Antigravity: ${instruction}`);
+  addStudioRow("Founder", `Antigravity: ${brief}`);
 
   let failed = false;
   let proof = null;
@@ -1361,51 +1634,57 @@ antigravityBtn.addEventListener("click", async () => {
     const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/implement`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instruction }),
+      body: JSON.stringify({ instruction: brief }),
     });
     await consumeEventStream(res, (event) => {
       ingestPresence(event);
-      if (event.text) {
+      if (event.text && event.type !== "implement_stage") {
         addStudioRow(displayName(event.agent), event.text);
         addAntigravityLog(displayName(event.agent), event.text);
+      }
+      if (event.type === "implement_stage") {
+        const stage = event.proof?.stage || "";
+        const label = event.proof?.label || event.text || AG_STAGE_META[stage]?.label || "Working…";
+        const percent = AG_STAGE_META[stage]?.percent;
+        setAntigravityProgress(label, percent, stage);
+        if (stage === "scaffold-api") {
+          setAgWorker("theo", "Directing", true, "Supervising build stages");
+          setAgWorker("api", "Scaffolding API", true, "Scaffolding API");
+        } else if (stage === "writing-screens") {
+          setAgWorker("api", "API scaffolded", false, "API scaffold ready");
+          setAgWorker("ui", "Writing screens", true, "Writing screens");
+        } else if (stage === "wiring-memory") {
+          setAgWorker("ui", "Screens ready", false, "Screens ready");
+          setAgWorker("api", "Wiring save/load", true, "Wiring save/load");
+        } else if (stage === "verifying") {
+          setAgWorker("api", "Verifying persistence", true, "Verifying persistence");
+        } else if (stage === "opening-pr") {
+          setAgWorker("api", "Verified", false, "Save/load verified");
+          setAgWorker("deploy", "Opening PR", true, "Opening PR");
+        } else if (stage === "complete") {
+          setAgWorker("deploy", proof?.pullRequestUrl ? "PR ready" : "Complete", false, proof?.pullRequestUrl ? "GitHub PR published" : "Preview published");
+        }
       }
       if (event.type === "implement_agent") {
         const worker = event.proof?.worker || "theo";
         const status = event.proof?.status || "working";
         const task = event.proof?.task || event.text || "";
-        setAgWorker(worker, status, !["done", "complete", "pr ready"].includes(String(status).toLowerCase()), task);
-        if (worker === "api" || worker === "ui") setAntigravityProgress(task || "Coding agents working…", 55);
-        if (worker === "deploy") setAntigravityProgress(task || "Deploying…", 84);
-        if (String(status).toLowerCase() === "verifying") setAntigravityProgress("Verifying save and reload…", 90);
-        if (String(status).toLowerCase() === "verified") {
-          setAntigravityProgress("Save/reload verified", 94);
-          if (antigravityVerify) antigravityVerify.hidden = false;
+        const stage = event.proof?.stage || "";
+        const idleStatuses = ["done", "complete", "pr ready", "verified", "api scaffolded", "screens ready"];
+        setAgWorker(worker, status, !idleStatuses.includes(String(status).toLowerCase()), task);
+        if (stage && AG_STAGE_META[stage]) {
+          setAntigravityProgress(AG_STAGE_META[stage].label, AG_STAGE_META[stage].percent, stage);
+        }
+        if (String(status).toLowerCase() === "verified" && antigravityVerify) {
+          antigravityVerify.hidden = false;
         }
       }
       if (event.type === "implement_file" && event.proof?.path) {
         upsertAntigravityFile(event.proof.path, event.proof.content || "");
         const total = Number(event.proof.total || agFileMap.size);
         const index = Number(event.proof.index || agFileMap.size);
-        setAntigravityProgress(`Streaming source files · ${index}/${total}`, 40 + Math.round((index / Math.max(total, 1)) * 35));
-        setAgWorker(event.proof.worker === "ui" ? "ui" : "api", "Writing", true, `Writing ${event.proof.path}`);
-      }
-      if (event.type === "implement_step") {
-        const text = String(event.text || "").toLowerCase();
-        if (text.includes("generating") || text.includes("coding") || text.includes("worker")) {
-          setAgWorker("theo", "Directing", true, "Supervising Antigravity workers");
-          setAgWorker("api", "Coding", true, "Building API and memory");
-          setAgWorker("ui", "Coding", true, "Building screens and forms");
-          setAntigravityProgress("Coding agents are building the real app…", 48);
-        } else if (text.includes("scaffold") || text.includes("gemini")) {
-          setAgWorker("api", "Scaffolding", true, "Creating deployable scaffold");
-          setAgWorker("ui", "Scaffolding", true, "Creating UI scaffold");
-          setAntigravityProgress("Building a deployable app scaffold…", 62);
-        } else if (text.includes("github") || text.includes("deliver") || text.includes("publishing")) {
-          setAgWorker("api", "Done", false, "API files ready");
-          setAgWorker("ui", "Done", false, "UI files ready");
-          setAgWorker("deploy", "Publishing", true, "Opening GitHub PR");
-          setAntigravityProgress("Deploy agent is opening the GitHub PR…", 84);
-        }
+        setAntigravityProgress(`Wiring save/load · ${index}/${total} files`, 62 + Math.round((index / Math.max(total, 1)) * 12), "wiring-memory");
+        setAgWorker(event.proof.worker === "ui" ? "ui" : "api", "Wiring save/load", true, `Writing ${event.proof.path}`);
       }
       if (event.proof?.pullRequestUrl || event.proof?.previewAppUrl || event.proof?.runId) {
         proof = { ...(proof || {}), ...event.proof };
@@ -1433,7 +1712,7 @@ antigravityBtn.addEventListener("click", async () => {
       setAgWorker("api", "Complete", false, proof?.verified ? "Save/load verified" : "Backend ready");
       setAgWorker("ui", "Complete", false, "UI ready");
       setAgWorker("deploy", proof?.pullRequestUrl ? "PR ready" : "Complete", false, proof?.pullRequestUrl ? "GitHub PR published" : "Preview published");
-      setAntigravityProgress(proof?.verified ? "Real app delivered · save/load verified" : (proof?.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100);
+      setAntigravityProgress(proof?.verified ? "Real app delivered · save/load verified" : (proof?.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100, "complete");
       if (antigravityVerify) antigravityVerify.hidden = !proof?.verified;
       if (proof?.previewAppUrl) selectAntigravityTab("preview");
     }
@@ -1445,12 +1724,28 @@ antigravityBtn.addEventListener("click", async () => {
     setAgWorker("theo", "Blocked", false, error.message);
     setAntigravityProgress("Needs attention", 100);
   } finally {
+    agBuildInFlight = false;
     studioEl.dataset.busy = "false";
     studioStateEl.textContent = failed ? "Needs attention" : "Real app ready";
     updateAntigravityCard(true, false);
     syncStudio();
     finishTask(failed ? "Antigravity needs attention" : "Antigravity delivery ready");
   }
+}
+
+antigravityBtn.addEventListener("click", async () => {
+  if (!episode.missionId || antigravityBtn.disabled) return;
+
+  // While a build is running, this button means "come back to the live build".
+  if (agSessionStatus === "running" || antigravityBtn.dataset.mode === "reopen") {
+    reopenAntigravityBuild();
+    return;
+  }
+
+  await startAntigravityBuild(
+    studioPromptEl.value.trim()
+      || "Implement durable backend memory and a deployable real app for this product concept.",
+  );
 });
 
 async function restorePreviousBuild() {

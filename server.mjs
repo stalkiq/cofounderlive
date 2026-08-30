@@ -7,7 +7,7 @@ import { ZipArchive } from "archiver";
 import { runMvpSprint, runNightShift, runWatcherTick } from "./lib/agent.mjs";
 import * as memory from "./lib/memory.mjs";
 import { geminiStatus, normalizeStudioModel } from "./lib/gemini.mjs";
-import { getWorkspaceState, runWorkspaceTurn } from "./lib/workspace.mjs";
+import { getWorkspaceState, runCofounderAsk, runWorkspaceTurn } from "./lib/workspace.mjs";
 import {
   analyzeVisionCapability,
   getBigQueryCapabilityData,
@@ -440,6 +440,7 @@ app.post("/api/workspace/:missionId/turn", async (req, res) => {
   const missionId = String(req.params.missionId || "").trim();
   const instruction = String(req.body?.instruction || "").trim();
   const studioModel = normalizeStudioModel(req.body?.studioModel);
+  const cofounder = String(req.body?.cofounder || "").trim().toLowerCase();
   if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
     return res.status(400).json({ error: "valid missionId is required" });
   }
@@ -456,21 +457,41 @@ app.post("/api/workspace/:missionId/turn", async (req, res) => {
     send({
       type: "studio_start",
       agent: "director",
-      text: studioModel === "gemma"
-        ? "Gemma will draft alternatives, then Gemini will apply the revision."
-        : "The AI Build Studio is applying your request with Gemini.",
+      text: cofounder === "maya"
+        ? "Maya is leading this product change."
+        : cofounder === "theo"
+          ? "Theo is leading this product change."
+          : studioModel === "gemma"
+            ? "Gemma will draft alternatives, then Gemini will apply the revision."
+            : "The AI Build Studio is applying your request with Gemini.",
     });
     const proof = await runWorkspaceTurn(
       missionId,
       instruction,
       async (event) => send(event),
-      { studioModel },
+      { studioModel, cofounder },
     );
     send({ type: "studio_done", agent: "director", text: "Your product concept has been updated.", proof });
   } catch (err) {
     send({ type: "error", agent: "director", text: err.message });
   }
   res.end();
+});
+
+app.post("/api/workspace/:missionId/ask", async (req, res) => {
+  const missionId = String(req.params.missionId || "").trim();
+  const instruction = String(req.body?.instruction || "").trim();
+  const cofounder = String(req.body?.cofounder || "theo").trim().toLowerCase();
+  if (!/^ep_[a-z0-9]+$/i.test(missionId)) {
+    return res.status(400).json({ error: "valid missionId is required" });
+  }
+  if (!instruction) return res.status(400).json({ error: "instruction is required" });
+  try {
+    const proof = await runCofounderAsk(missionId, instruction, { cofounder });
+    return res.json(proof);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 app.post("/api/agent/tick", async (req, res) => {

@@ -12,9 +12,7 @@ Cofounder Live turns one founder brief into a published investor page and an int
 
 ## Hackathon track
 
-All Things Agentic **CTaskmaster Partner**:
-
-Cofounder Live turns one founder brief into a complete, reviewable product delivery—not just a chatbot response. Maya and Theo plan the product, create and critique an investor page, build an interactive concept, apply feedback, and deploy a full application through Antigravity coding agents. The workflow includes persistent storage, automated save/load verification, live previews, downloadable code, and GitHub pull requests, proving that the agents perform the work from idea to delivery.
+ **Taskmaster**: Cofounder Live turns one founder brief into a complete, reviewable product delivery—not just a chatbot response. Maya and Theo plan the product, create and critique an investor page, build an interactive concept, apply feedback, and deploy a full application through Antigravity coding agents. The workflow includes persistent storage, automated save/load verification, live previews, downloadable code, and GitHub pull requests, proving that the agents perform the work from idea to delivery.
 
 ## Problem and value proposition
 

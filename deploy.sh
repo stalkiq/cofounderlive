@@ -35,7 +35,7 @@ DEPLOY_ARGS=(
   --allow-unauthenticated
   --memory 1Gi
   --cpu 1
-  --timeout 300
+  --timeout 900
   --update-env-vars "GOOGLE_TTS_ENABLED=true,GEMINI_MODEL=gemini-3.5-flash,VERTEX_LOCATION=global,BIGQUERY_DATASET=cofounder_live,BIGQUERY_LOCATION=US"
 )
 

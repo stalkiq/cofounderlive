@@ -1461,16 +1461,14 @@ async function hydrateAntigravitySession(missionId) {
       setAgWorker("ui", "Complete", false, "UI ready");
       setAgWorker("deploy", state.pullRequestUrl ? "PR ready" : "Complete", false, state.pullRequestUrl ? "GitHub PR published" : "Preview published");
       setAntigravityProgress(state.verified ? "Real app delivered · save/load verified" : (state.previewAppUrl ? "Real app delivered" : "Implementation complete"), 100, "complete");
-      const restoreLine = state.cofounderReply
-        || (state.instruction
-          ? `Previous build ready. Last request: ${String(state.instruction).slice(0, 120)}`
-          : "Previous Antigravity build restored.");
+      const restoreLine = state.instruction
+        ? `Previous build ready. Last request: ${String(state.instruction).slice(0, 120)}`
+        : "Previous Antigravity build restored.";
       addAntigravityLog(
         "Theo",
-        isAntigravityToolDump(state.cofounderReply || state.summary)
+        isAntigravityToolDump(state.summary)
           ? restoreLine
-          : (state.cofounderReply || state.summary || restoreLine),
-        { trust: Boolean(state.cofounderReply) },
+          : (state.summary || restoreLine),
       );
       if (state.verified) addAntigravityLog("System", "Durable memory was verified for this build.");
     } else if (state.status === "failed") {
@@ -1677,7 +1675,7 @@ async function startAntigravityBuild(instruction, options = {}) {
 
   agBuildInFlight = true;
   if (mode === "revise") {
-    // Keep existing preview/files; chat reply comes from Theo as a cofounder message.
+    // Keep existing preview and files visible while agents apply the change.
   } else {
     antigravityLog.innerHTML = "";
     agFileMap.clear();
@@ -1717,6 +1715,7 @@ async function startAntigravityBuild(instruction, options = {}) {
   addStudioRow("Founder", `Antigravity ${mode === "revise" ? "change" : "build"}: ${brief}`);
 
   let failed = false;
+  let buildCompleted = false;
   let proof = mode === "revise" ? agLastProof : null;
   try {
     const res = await fetch(`/api/workspace/${encodeURIComponent(episode.missionId)}/implement`, {
@@ -1726,17 +1725,27 @@ async function startAntigravityBuild(instruction, options = {}) {
     });
     await consumeEventStream(res, (event) => {
       ingestPresence(event);
-      if (event.type === "cofounder_reply" && event.text) {
-        addAntigravityLog("Theo", event.text, { trust: true });
-        addAgTheoAskRow("Theo", event.text);
-        addStudioRow("Theo", event.text);
-        return;
+      const worker = event.proof?.worker || "";
+      const actor = worker === "api"
+        ? "API agent"
+        : worker === "ui"
+          ? "UI agent"
+          : worker === "deploy"
+            ? "Deploy agent"
+            : event.agent === "technical"
+              ? "Theo"
+              : displayName(event.agent);
+      if (event.type === "implement_file" && event.proof?.path) {
+        addAntigravityLog(actor, `Wrote ${event.proof.path}`);
+      } else if (event.text && event.type !== "implement_done") {
+        addAntigravityLog(actor, event.text);
       }
-      // Keep Activity as a cofounder chat: stage/agent/file noise stays in the sidebar.
-      if (["implement_stage", "implement_agent", "implement_step", "implement_file"].includes(event.type)) {
-        // still drive workers/progress below
-      } else if (event.text && event.type !== "implement_start" && event.type !== "implement_done") {
+      if (event.text && !["implement_stage", "implement_file"].includes(event.type)) {
         addStudioRow(displayName(event.agent), event.text);
+      }
+      if (event.type === "implement_done" || event.proof?.status === "completed") {
+        buildCompleted = Number(event.proof?.fileCount || 0) > 0
+          && Boolean(event.proof?.previewAppUrl);
       }
       if (event.type === "implement_stage") {
         const stage = event.proof?.stage || "";
@@ -1790,6 +1799,13 @@ async function startAntigravityBuild(instruction, options = {}) {
       }
       if (event.type === "error") failed = true;
     });
+    if (!failed && !buildCompleted) {
+      failed = true;
+      addAntigravityLog(
+        "System",
+        "The build stream ended before verified files and a preview were delivered. This run was not marked complete.",
+      );
+    }
     if (proof?.previewAppUrl || proof?.pullRequestUrl) {
       agLastProof = proof;
       showAntigravityLinks(proof);

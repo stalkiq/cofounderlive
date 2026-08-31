@@ -12,9 +12,9 @@ Cofounder Live turns one founder brief into a published investor page and an int
 
 ## Hackathon track
 
-All Things Agentic **Collaborative Partner**: Build an agent that leads the way and takes notes. It should ask clarifying questions, guide the user step-by-step, and have a clear way to capture feedback, so it constantly adapts to the user's unique way of thinking.
+All Things Agentic **CTaskmaster Partner**:
 
-This is an agentic workflow, not a chat wrapper. Gemini chooses and calls application tools, observes their results, and continues until the required artifact has been reviewed and revised.
+Cofounder Live turns one founder brief into a complete, reviewable product delivery—not just a chatbot response. Maya and Theo plan the product, create and critique an investor page, build an interactive concept, apply feedback, and deploy a full application through Antigravity coding agents. The workflow includes persistent storage, automated save/load verification, live previews, downloadable code, and GitHub pull requests, proving that the agents perform the work from idea to delivery.
 
 ## Problem and value proposition
 

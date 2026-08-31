@@ -395,7 +395,6 @@ const antigravityCardApp = document.getElementById("antigravityCardApp");
 const antigravityHint = document.getElementById("antigravityHint");
 const antigravityModal = document.getElementById("antigravityModal");
 const antigravityBackdrop = document.getElementById("antigravityBackdrop");
-const antigravityClose = document.getElementById("antigravityClose");
 const antigravityCloseSecondary = document.getElementById("antigravityCloseSecondary");
 const antigravityLog = document.getElementById("antigravityLog");
 const antigravityStage = document.getElementById("antigravityStage");
@@ -1649,7 +1648,6 @@ antigravityFiles.addEventListener("click", (event) => {
   renderAntigravityFiles(agActiveFile);
 });
 
-antigravityClose.addEventListener("click", closeAntigravityModal);
 antigravityCloseSecondary.addEventListener("click", closeAntigravityModal);
 antigravityBackdrop.addEventListener("click", closeAntigravityModal);
 
